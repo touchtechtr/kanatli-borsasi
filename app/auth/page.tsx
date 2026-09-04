@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client' // Projenizdeki supabase client yoluna göre düzenleyebilirsiniz (örn: @/lib/supabaseClient)
+import { createClient } from '@/lib/supabaseClient'
+// Veya: import { createClient } from '@/lib/supabase/client' /
 
 export default function AuthPage() {
   const [email, setEmail] = useState('')
