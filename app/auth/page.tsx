@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabaseClient'
-// Veya: import { createClient } from '@/lib/supabase/client' /
+import { createClient } from '@/lib/supabase/client'
 
 export default function AuthPage() {
   const [email, setEmail] = useState('')
@@ -47,11 +46,9 @@ export default function AuthPage() {
     setError(null)
     setLoading(true)
 
-    // Build hatasını önlemek için createClient fonksiyonu işlem anında (fonksiyon içinde) çağrılıyor
     const supabase = createClient()
 
     if (isLogin) {
-      // Giriş İşlemi
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -65,7 +62,6 @@ export default function AuthPage() {
         router.refresh()
       }
     } else {
-      // Kayıt Olma İşlemi
       if (!selectedCompanyId) {
         setError('Lütfen bağlı olduğunuz firmayı seçin.')
         setLoading(false)
