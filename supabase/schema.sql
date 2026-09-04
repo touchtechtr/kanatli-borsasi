@@ -1,7 +1,5 @@
 -- ============================================================
--- Kanatlı Borsası — Temel Şema (Firmalar + Kullanıcı Profilleri)
--- Bu dosyayı Supabase Dashboard > SQL Editor içine yapıştırıp
--- "Run" ile çalıştırın.
+-- Kanatlı Borsası — Tam Veritabanı Şeması
 -- ============================================================
 
 -- Firma tipleri
@@ -30,14 +28,37 @@ create table public.profiles (
 
 comment on table public.profiles is 'auth.users ile companies arasındaki bağlantı; her kullanıcı bir firmaya bağlanır';
 
+
+-- ------------------------------------------------------------
+-- İlanlar Tablosu (Canlı Borsa / Ürünler)
+-- ------------------------------------------------------------
+create table public.listings (
+  id uuid default gen_random_uuid() primary key,
+  company_id uuid references public.companies(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  title text not null,
+  category text not null, -- Örn: "Yem", "Canlı Hayvan", "Emtia"
+  price numeric(12, 2) not null,
+  unit text not null, -- Örn: "Kg", "Adet", "Ton"
+  quantity numeric(12, 2) not null,
+  city text not null,
+  description text,
+  status text check (status in ('aktif', 'pasif', 'satildi')) default 'aktif',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+comment on table public.listings is 'Çiftçilerin ve tedarikçilerin açtığı borsa ilanları';
+
+
 -- ============================================================
--- Row Level Security
+-- Row Level Security (RLS)
 -- ============================================================
 
 alter table public.companies enable row level security;
 alter table public.profiles enable row level security;
+alter table public.listings enable row level security;
 
--- Firmalar: giriş yapmış herkes görebilir (borsa ekranında firma adları görünecek)
+-- Firmalar: herkes görebilir (borsada firma isimleri listelenecek)
 create policy "companies_select_authenticated"
 on public.companies for select
 to authenticated
@@ -62,6 +83,21 @@ create policy "profiles_update_own"
 on public.profiles for update
 to authenticated
 using (id = auth.uid());
+
+
+-- İlan Politikaları
+create policy "Listings are viewable by everyone." on public.listings
+  for select using (true);
+
+create policy "Authenticated users can insert listings." on public.listings
+  for insert with check (auth.role() = 'authenticated');
+
+create policy "Users can update own listings." on public.listings
+  for update using (auth.uid() = user_id);
+
+create policy "Users can delete own listings." on public.listings
+  for delete using (auth.uid() = user_id);
+
 
 -- ============================================================
 -- Yeni kullanıcı kayıt olunca otomatik boş profil oluştur

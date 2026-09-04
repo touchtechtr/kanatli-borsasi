@@ -1,134 +1,165 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
-
-interface Company {
-  id: string
-  name: string
-  type: string
-}
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function AuthPage() {
-  const router = useRouter()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
-  const [companies, setCompanies] = useState<Company[]>([])
-  const [selectedCompanyId, setSelectedCompanyId] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [role, setRole] = useState<'ciftci' | 'tuccar' | 'tedarikci'>('ciftci')
+  const [taxNo, setTaxNo] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
 
-  useEffect(() => {
-    fetchCompanies()
-  }, [])
-
-  const fetchCompanies = async () => {
-    const { data, error } = await supabase
-      .from('companies')
-      .select('id, name, type')
-      .order('name', { ascending: true })
-
-    if (error) {
-      console.error('Firmalar yüklenemedi:', error.message)
-    } else if (data && data.length > 0) {
-      setCompanies(data)
-      setSelectedCompanyId(data[0].id)
-    }
-  }
+  const supabase = createClient()
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     setLoading(true)
-    setErrorMsg('')
 
     if (isLogin) {
-      // Giriş İşlemi
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
-        setErrorMsg('Giriş başarısız: ' + error.message)
+        setError(error.message)
+        setLoading(false)
       } else {
-        router.push('/')
-        router.refresh()
+        window.location.href = '/'
       }
     } else {
-      // Kayıt Olma İşlemi
-      if (!selectedCompanyId) {
-        setErrorMsg('Lütfen bağlı olduğunuz firmayı seçin.')
-        setLoading(false)
-        return
-      }
-
-      const { data, error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
-            company_id: selectedCompanyId,
+            company_name: companyName,
+            role: role,
+            tax_no: taxNo,
           },
         },
       })
 
-      if (error) {
-        setErrorMsg('Kayıt oluşturulamadı: ' + error.message)
+      if (signUpError) {
+        setError(signUpError.message)
+        setLoading(false)
       } else {
-        // Eğer profil tablosu tetikleyici ile doluyorsa direkt yönlendiriyoruz
-        alert('Kayıt başarılı! Giriş yapabilirsiniz.')
-        setIsLogin(true)
+        window.location.href = '/'
       }
     }
-    setLoading(false)
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-8 space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-slate-900">
-            {isLogin ? 'Borsa Paneline Giriş' : 'Yeni Hesap Oluştur'}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {isLogin ? 'Devam etmek için hesabınıza giriş yapın' : 'Bilgilerinizi girerek borsaya katılın'}
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-slate-900">Kanatlı Borsası</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            {isLogin ? 'Hesabınıza giriş yapın' : 'Yeni bir kurumsal hesap oluşturun'}
           </p>
         </div>
 
-        {errorMsg && (
-          <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl border border-red-100 font-medium">
-            {errorMsg}
+        {/* Sekme Butonları */}
+        <div className="flex border-b border-slate-200">
+          <button
+            type="button"
+            className={`w-1/2 py-3 text-sm font-medium text-center border-b-2 transition-colors ${
+              isLogin
+                ? 'border-emerald-600 text-emerald-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+            onClick={() => setIsLogin(true)}
+          >
+            Giriş Yap
+          </button>
+          <button
+            type="button"
+            className={`w-1/2 py-3 text-sm font-medium text-center border-b-2 transition-colors ${
+              !isLogin
+                ? 'border-emerald-600 text-emerald-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+            onClick={() => setIsLogin(false)}
+          >
+            Kayıt Ol
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 text-sm text-red-700">
+            {error}
           </div>
         )}
 
-        <form onSubmit={handleAuth} className="space-y-4">
+        <form className="mt-8 space-y-4" onSubmit={handleAuth}>
           {!isLogin && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Ad Soyad</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Örn: Ahmet Yılmaz"
-                className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 focus:outline-none focus:border-slate-400"
-                required
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Ad Soyad</label>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl p-2.5 text-sm bg-slate-50"
+                  placeholder="Ahmet Yılmaz"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Firma Ünvanı</label>
+                <input
+                  type="text"
+                  required
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl p-2.5 text-sm bg-slate-50"
+                  placeholder="Yılmazlar Tavukçuluk Ltd. Şti."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Rol / Sektör Türü</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as any)}
+                  className="w-full border border-slate-200 rounded-xl p-2.5 text-sm bg-slate-50"
+                >
+                  <option value="ciftci">Çiftçi / Üretici</option>
+                  <option value="tuccar">Tüccar / Alıcı</option>
+                  <option value="tedarikci">Tedarikçi (Yem/İlaç vb.)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Vergi Numarası (Opsiyonel)</label>
+                <input
+                  type="text"
+                  value={taxNo}
+                  onChange={(e) => setTaxNo(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl p-2.5 text-sm bg-slate-50"
+                  placeholder="1234567890"
+                />
+              </div>
+            </>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">E-Posta Adresi</label>
+            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">E-posta Adresi</label>
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ornek@firma.com"
-              className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 focus:outline-none focus:border-slate-400"
-              required
+              className="w-full border border-slate-200 rounded-xl p-2.5 text-sm bg-slate-50"
+              placeholder="ornek@mail.com"
             />
           </div>
 
@@ -136,49 +167,25 @@ export default function AuthPage() {
             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Şifre</label>
             <input
               type="password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl p-2.5 text-sm bg-slate-50"
               placeholder="••••••••"
-              className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 focus:outline-none focus:border-slate-400"
-              required
             />
           </div>
 
-          {!isLogin && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Bağlı Olduğunuz Firma</label>
-              <select
-                value={selectedCompanyId}
-                onChange={(e) => setSelectedCompanyId(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 focus:outline-none focus:border-slate-400"
-              >
-                {companies.map((comp) => (
-                  <option key={comp.id} value={comp.id}>
-                    {comp.name} ({comp.type})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-xl text-sm transition-all shadow-sm disabled:opacity-50"
-          >
-            {loading ? 'İşlem yapılıyor...' : isLogin ? 'Giriş Yap' : 'Kayıt Ol'}
-          </button>
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-emerald-600 text-white font-medium py-2.5 rounded-xl text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'İşlem yapılıyor...' : isLogin ? 'Giriş Yap' : 'Kayıt Ol'}
+            </button>
+          </div>
         </form>
-
-        <div className="text-center pt-2">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-xs text-slate-500 hover:text-slate-800 font-medium transition-colors"
-          >
-            {isLogin ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
-          </button>
-        </div>
       </div>
-    </main>
+    </div>
   )
 }
