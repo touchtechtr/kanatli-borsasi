@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Sparkline from '@/components/Sparkline';
@@ -70,7 +70,7 @@ interface ContractFarming {
   }[] | null
 }
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -679,5 +679,12 @@ export default function Home() {
 
       </div>
     </main>
+  )
+}
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   )
 }
