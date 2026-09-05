@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 type Company = {
@@ -31,11 +30,8 @@ const STATUS_BADGE: Record<Company['status'], { text: string; className: string 
 }
 
 export default function AdminFirmaOnayPage() {
-  const router = useRouter()
   const supabase = createClient()
 
-  const [checkingAccess, setCheckingAccess] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [companies, setCompanies] = useState<Company[]>([])
   const [activeTab, setActiveTab] = useState<FilterTab>('beklemede')
@@ -43,33 +39,8 @@ export default function AdminFirmaOnayPage() {
   const [processingId, setProcessingId] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAccessAndLoad()
+    fetchCompanies()
   }, [])
-
-  const checkAccessAndLoad = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      router.push('/auth')
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!profile?.is_admin) {
-      setIsAdmin(false)
-      setCheckingAccess(false)
-      return
-    }
-
-    setIsAdmin(true)
-    setCheckingAccess(false)
-    await fetchCompanies()
-  }
 
   const fetchCompanies = async () => {
     setLoading(true)
@@ -118,38 +89,14 @@ export default function AdminFirmaOnayPage() {
     hepsi: companies.length,
   }
 
-  if (checkingAccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">
-        Kontrol ediliyor...
-      </div>
-    )
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-        <div className="max-w-sm w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-100 text-center">
-          <h1 className="text-lg font-bold text-slate-900 mb-2">Erişim Yetkiniz Yok</h1>
-          <p className="text-sm text-slate-500">
-            Bu sayfa sadece platform yöneticileri içindir.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <main className="min-h-screen bg-slate-50 p-6 md:p-12">
+    <main className="p-6 md:p-12">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <h1 className="text-xl font-bold text-slate-900">Firma Onay Paneli</h1>
-          <button
-            onClick={() => router.push('/')}
-            className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-          >
-            ← Borsaya Dön
-          </button>
+          <p className="text-sm text-slate-500 mt-1">
+            Yeni firma başvurularını inceleyip onaylayın veya reddedin.
+          </p>
         </div>
 
         <div className="flex gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
