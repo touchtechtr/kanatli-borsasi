@@ -14,6 +14,10 @@ interface Company {
   address: string
   website: string
   status: 'beklemede' | 'onaylandi' | 'reddedildi'
+  rejection_count: number
+  last_rejection_reason: string | null
+  blocked_until: string | null
+  is_permanently_blocked: boolean
 }
 
 export default function ProfilePage() {
@@ -127,27 +131,121 @@ export default function ProfilePage() {
         </div>
 
         {/* Şirket Durumu ve Uyarı Kutusu */}
-        {company && (
-          <div className={`p-6 rounded-2xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
-            company.status === 'onaylandi' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'
-          }`}>
-            <div className="space-y-1">
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase ${
-                company.status === 'onaylandi' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-              }`}>
-                {company.status === 'onaylandi' ? '✓ Onaylı İşletme (Aktif Ticaret Yetkisi)' : '⏳ Admin Onayı Bekliyor (Alım/Satım Kısıtlı)'}
-              </span>
-              <h2 className="text-lg font-bold text-slate-900 mt-2">{company.name}</h2>
-              <p className="text-xs text-slate-600">Rol: {company.role} | Şehir: {company.city} {company.phone && `| Tel: ${company.phone}`}</p>
-            </div>
-            
-            {company.status !== 'onaylandi' && (
-              <div className="text-xs bg-amber-100 text-amber-900 px-4 py-3 rounded-xl border border-amber-200 font-medium max-w-xs">
-                ⚠️ Hesabınız inceleniyor. Admin onayından sonra borsa üzerinden ilan açıp alım/satım yapabileceksiniz.
-              </div>
-            )}
-          </div>
+{company && (
+  <div
+    className={`p-6 rounded-2xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
+      company.status === 'onaylandi'
+        ? 'bg-emerald-50/50 border-emerald-200'
+        : company.status === 'reddedildi'
+          ? 'bg-red-50/50 border-red-200'
+          : 'bg-amber-50/50 border-amber-200'
+    }`}
+  >
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase ${
+            company.status === 'onaylandi'
+              ? 'bg-emerald-100 text-emerald-800'
+              : company.status === 'reddedildi'
+                ? 'bg-red-100 text-red-800'
+                : 'bg-amber-100 text-amber-800'
+          }`}
+        >
+          {company.status === 'onaylandi'
+            ? '✓ Onaylı İşletme — Aktif Ticaret Yetkisi'
+            : company.status === 'reddedildi'
+              ? '✕ Firma Başvurusu Reddedildi'
+              : '⏳ Admin Onayı Bekliyor — Alım/Satım Kısıtlı'}
+        </span>
+
+        {company.rejection_count > 0 && (
+          <span
+            className={`text-xs font-bold px-2.5 py-1 rounded-md border ${
+              company.rejection_count >= 5
+                ? 'bg-red-100 text-red-800 border-red-300'
+                : company.rejection_count >= 3
+                  ? 'bg-orange-100 text-orange-800 border-orange-300'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}
+          >
+            ⚠ {company.rejection_count} Ret
+          </span>
         )}
+
+        {company.is_permanently_blocked && (
+          <span className="text-xs font-bold px-2.5 py-1 rounded-md border bg-red-100 text-red-800 border-red-300">
+            ⛔ Kalıcı Engelli
+          </span>
+        )}
+
+        {!company.is_permanently_blocked &&
+          company.blocked_until &&
+          new Date(company.blocked_until).getTime() > Date.now() && (
+            <span className="text-xs font-bold px-2.5 py-1 rounded-md border bg-orange-100 text-orange-800 border-orange-300">
+              ⏳ Geçici Engelli
+            </span>
+          )}
+      </div>
+
+      <h2 className="text-lg font-bold text-slate-900">
+        {company.name}
+      </h2>
+
+      <p className="text-xs text-slate-600">
+        Rol: {company.role} | Şehir: {company.city}
+        {company.phone && ` | Tel: ${company.phone}`}
+      </p>
+    </div>
+
+    {company.status === 'beklemede' && (
+      <div className="text-xs bg-amber-100 text-amber-900 px-4 py-3 rounded-xl border border-amber-200 font-medium max-w-sm">
+        ⚠️ Hesabınız inceleniyor. Admin onayından sonra borsa
+        üzerinden ilan açıp alım/satım yapabileceksiniz.
+      </div>
+    )}
+
+    {company.status === 'reddedildi' && (
+      <div className="text-xs bg-red-100 text-red-900 px-4 py-3 rounded-xl border border-red-200 font-medium max-w-sm space-y-2">
+        <p>
+          Başvurunuz onaylanmadı.
+        </p>
+
+        <p>
+          <strong>Ret nedeni:</strong>{' '}
+          {company.last_rejection_reason ||
+            'Ret nedeni belirtilmemiş.'}
+        </p>
+
+        {company.blocked_until &&
+          !company.is_permanently_blocked && (
+            <p>
+              <strong>Engel bitişi:</strong>{' '}
+              {new Date(company.blocked_until).toLocaleString(
+                'tr-TR'
+              )}
+            </p>
+          )}
+
+        {company.is_permanently_blocked && (
+          <p>
+            Bu firma kalıcı olarak engellenmiştir. Yeniden inceleme
+            için platform yönetimiyle iletişime geçin.
+          </p>
+        )}
+
+        {!company.is_permanently_blocked &&
+          (!company.blocked_until ||
+            new Date(company.blocked_until).getTime() <= Date.now()) && (
+            <p>
+              Firma bilgilerinizi düzelttikten sonra yeniden inceleme
+              talebi gönderebilirsiniz.
+            </p>
+          )}
+      </div>
+    )}
+  </div>
+)}
 
         {/* Ticari Geçmiş ve Alım/Satım Geçmişi Alanı (Gelecekte dolacak yapı) */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
