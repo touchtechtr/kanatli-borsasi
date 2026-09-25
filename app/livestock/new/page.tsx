@@ -41,10 +41,29 @@ export default function NewLivestockPage() {
       setLoading(false);
       return;
     }
+    const { data: company, error: companyError } = await supabase
+  .from('companies')
+  .select('id, status')
+  .eq('user_id', user.id)
+  .single();
 
+if (companyError || !company) {
+  alert('İlan vermeden önce firma veya çiftlik profilinizi oluşturmalısınız.');
+  setLoading(false);
+  router.push('/profil');
+  return;
+}
+
+if (company.status !== 'onaylandi') {
+  alert('İlan verebilmek için firma veya çiftlik hesabınızın yönetici tarafından onaylanması gerekir.');
+  setLoading(false);
+  router.push('/profil');
+  return;
+}
     const { error } = await supabase.from('livestock_listings').insert([
       {
         user_id: user.id,
+        company_id: company.id,
         animal_type: formData.animal_type,
         category: formData.category,
         breed: formData.breed,

@@ -9,11 +9,11 @@ interface Company {
   name: string
   role: string
   city: string
-  tax_number: string
+  tax_no: string
   phone: string
   address: string
   website: string
-  is_approved: boolean
+  status: 'beklemede' | 'onaylandi' | 'reddedildi'
 }
 
 export default function ProfilePage() {
@@ -27,9 +27,9 @@ export default function ProfilePage() {
   // Form alanları (İletişim ve Şirket detayları)
   const [formData, setFormData] = useState({
     name: '',
-    role: 'Çiftçi / Yetiştirici',
+    role: 'ciftci',
     city: 'Antalya',
-    tax_number: '',
+    tax_no: '',
     phone: '',
     address: '',
     website: ''
@@ -63,7 +63,7 @@ export default function ProfilePage() {
         name: compData.name || '',
         role: compData.role || 'Çiftçi / Yetiştirici',
         city: compData.city || 'Antalya',
-        tax_number: compData.tax_number || '',
+        tax_no: compData.tax_no || '',
         phone: compData.phone || '',
         address: compData.address || '',
         website: compData.website || ''
@@ -82,7 +82,7 @@ export default function ProfilePage() {
       name: formData.name,
       role: formData.role,
       city: formData.city,
-      tax_number: formData.tax_number,
+      tax_no: formData.tax_no,
       phone: formData.phone,
       address: formData.address,
       website: formData.website
@@ -129,19 +129,19 @@ export default function ProfilePage() {
         {/* Şirket Durumu ve Uyarı Kutusu */}
         {company && (
           <div className={`p-6 rounded-2xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
-            company.is_approved ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'
+            company.status === 'onaylandi' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'
           }`}>
             <div className="space-y-1">
               <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase ${
-                company.is_approved ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                company.status === 'onaylandi' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
               }`}>
-                {company.is_approved ? '✓ Onaylı İşletme (Aktif Ticaret Yetkisi)' : '⏳ Admin Onayı Bekliyor (Alım/Satım Kısıtlı)'}
+                {company.status === 'onaylandi' ? '✓ Onaylı İşletme (Aktif Ticaret Yetkisi)' : '⏳ Admin Onayı Bekliyor (Alım/Satım Kısıtlı)'}
               </span>
               <h2 className="text-lg font-bold text-slate-900 mt-2">{company.name}</h2>
               <p className="text-xs text-slate-600">Rol: {company.role} | Şehir: {company.city} {company.phone && `| Tel: ${company.phone}`}</p>
             </div>
             
-            {!company.is_approved && (
+            {company.status !== 'onaylandi' && (
               <div className="text-xs bg-amber-100 text-amber-900 px-4 py-3 rounded-xl border border-amber-200 font-medium max-w-xs">
                 ⚠️ Hesabınız inceleniyor. Admin onayından sonra borsa üzerinden ilan açıp alım/satım yapabileceksiniz.
               </div>
@@ -194,10 +194,11 @@ export default function ProfilePage() {
                 onChange={e => setFormData({...formData, role: e.target.value})}
                 className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 font-medium"
               >
-                <option value="Çiftçi / Yetiştirici">Çiftçi / Yetiştirici</option>
-                <option value="Entegre Tesis / Kesimhane">Entegre Tesis / Kesimhane</option>
-                <option value="Yem Fabrikası">Yem Fabrikası</option>
-                <option value="Bağımsız Uzman / Veteriner">Bağımsız Uzman / Veteriner</option>
+                <option value="ciftci">Çiftçi / Yetiştirici</option>
+                <option value="tuccar">Tüccar / Alıcı</option>
+                <option value="tedarikci">Yem Fabrikası / Tedarikçi</option>
+                <option value="entegre">Entegre Tesis / Kesimhane</option>
+                <option value="uzman">Bağımsız Uzman / Veteriner</option>
               </select>
             </div>
 
@@ -227,8 +228,8 @@ export default function ProfilePage() {
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Vergi Numarası</label>
               <input 
                 type="text" 
-                value={formData.tax_number} 
-                onChange={e => setFormData({...formData, tax_number: e.target.value})} 
+                value={formData.tax_no} 
+                onChange={e => setFormData({...formData, tax_no: e.target.value})} 
                 placeholder="Vergi numaranız..." 
                 className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50" 
               />

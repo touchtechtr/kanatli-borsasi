@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -15,32 +15,11 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [companies, setCompanies] = useState<any[]>([])
-  const [selectedCompanyId, setSelectedCompanyId] = useState('')
+  
 
   const router = useRouter()
 
-  useEffect(() => {
-    if (!isLogin) {
-      fetchCompanies()
-    }
-  }, [isLogin])
-
-  const fetchCompanies = async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('companies')
-      .select('id, name, type')
-      .order('name', { ascending: true })
-
-    if (error) {
-      console.error('Firmalar yüklenemedi:', error.message)
-    } else if (data && data.length > 0) {
-      setCompanies(data)
-      setSelectedCompanyId(data[0].id)
-    }
-  }
-
+  
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -62,11 +41,7 @@ export default function AuthPage() {
         router.refresh()
       }
     } else {
-      if (!selectedCompanyId) {
-        setError('Lütfen bağlı olduğunuz firmayı seçin.')
-        setLoading(false)
-        return
-      }
+      
 
       const { error: signUpError } = await supabase.auth.signUp({
         email,
@@ -74,7 +49,6 @@ export default function AuthPage() {
         options: {
           data: {
             full_name: fullName,
-            company_id: selectedCompanyId,
             company_name: companyName,
             role: role,
             tax_no: taxNo,
