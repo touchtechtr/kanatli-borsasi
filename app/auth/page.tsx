@@ -163,6 +163,17 @@ export default function AuthPage() {
             />
           </div>
 
+          {isLogin && (
+           <div className="text-right">
+            <button
+            type="button"
+            onClick={() => router.push('/auth/reset-password')}
+            className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline font-medium"
+         >
+            Şifremi Unuttum
+         </button>
+       </div>
+      )}
           <button
             type="submit"
             disabled={loading}
