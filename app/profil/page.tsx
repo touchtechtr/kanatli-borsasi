@@ -20,6 +20,12 @@ interface Company {
   is_permanently_blocked: boolean
 }
 
+interface RejectionHistory {
+  id: string
+  reason: string | null
+  created_at: string
+}
+
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
@@ -27,6 +33,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<Company | null>(null)
+  const [rejectionHistory, setRejectionHistory] = useState<RejectionHistory[]>([])
   
   // Form alanları (İletişim ve Şirket detayları)
   const [formData, setFormData] = useState({
@@ -62,6 +69,14 @@ export default function ProfilePage() {
       .single()
 
     if (compData) {
+      const { data: historyData } = await supabase
+        .from('company_moderation_history')
+        .select('id, reason, created_at')
+       .eq('company_id', compData.id)
+       .eq('action', 'reddedildi')
+       .order('created_at', { ascending: false })
+
+setRejectionHistory(historyData || [])
       setCompany(compData)
       setFormData({
         name: compData.name || '',
@@ -211,11 +226,32 @@ export default function ProfilePage() {
           Başvurunuz onaylanmadı.
         </p>
 
-        <p>
-          <strong>Ret nedeni:</strong>{' '}
-          {company.last_rejection_reason ||
-            'Ret nedeni belirtilmemiş.'}
-        </p>
+        <div>
+  <strong>Ret nedenleri:</strong>
+
+  {rejectionHistory.length > 0 ? (
+    <div className="mt-2 space-y-2">
+      {rejectionHistory.map((item, index) => (
+        <div
+          key={item.id}
+          className="rounded-lg border border-red-200 bg-white/60 px-3 py-2"
+        >
+          <p>
+            {index + 1}. {item.reason || 'Ret nedeni belirtilmemiş.'}
+          </p>
+
+          <p className="mt-1 text-[11px] text-red-700">
+            {new Date(item.created_at).toLocaleString('tr-TR')}
+          </p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="mt-1">
+      {company.last_rejection_reason || 'Ret nedeni belirtilmemiş.'}
+    </p>
+  )}
+</div>
 
         {company.blocked_until &&
           !company.is_permanently_blocked && (
