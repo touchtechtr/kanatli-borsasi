@@ -11,6 +11,8 @@ type Company = {
   tax_no: string | null
   phone: string | null
   city: string | null
+  address: string | null
+  website: string | null
   status: 'beklemede' | 'onaylandi' | 'reddedildi'
   rejection_count: number
   last_rejection_reason: string | null
@@ -68,6 +70,7 @@ export default function AdminFirmaOnayPage() {
 
   const [loading, setLoading] = useState(true)
   const [companies, setCompanies] = useState<Company[]>([])
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
   const [rejectionHistory, setRejectionHistory] = useState<RejectionHistory[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<FilterTab>('beklemede')
@@ -261,9 +264,16 @@ export default function AdminFirmaOnayPage() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-slate-900">
-                        {company.name}
-                      </p>
+                      
+                    <button
+                     type="button"
+                     onClick={() => setSelectedCompany(company)}
+                     className="font-semibold text-slate-900 hover:text-emerald-700 hover:underline text-left"
+                     title="Firma ayrıntılarını görüntüle"
+                   >
+                      {company.name}
+                    </button>
+                      
 
                       <span
                         className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
@@ -366,7 +376,7 @@ export default function AdminFirmaOnayPage() {
                         company.status === 'onaylandi' ||
                         processingId === company.id
                       }
-                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:border disabled:border-slate-300 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
                       Onayla
                     </button>
@@ -379,10 +389,11 @@ export default function AdminFirmaOnayPage() {
                       }}
                       disabled={
                         ownCompany ||
+                        blocked ||
                         company.status === 'reddedildi' ||
                         processingId === company.id
                       }
-                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
                       Reddet
                     </button>
@@ -393,6 +404,163 @@ export default function AdminFirmaOnayPage() {
           )}
         </div>
       </div>
+
+      {selectedCompany && (
+  <div
+    className="fixed inset-0 z-50 bg-slate-950/50 flex items-center justify-center p-4"
+    onClick={() => setSelectedCompany(null)}
+  >
+    <div
+      className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">
+            {selectedCompany.name}
+          </h2>
+
+          <p className="text-sm text-slate-500 mt-1">
+            Firma başvuru ve moderasyon ayrıntıları
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSelectedCompany(null)}
+          className="h-9 w-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold"
+          aria-label="Pencereyi kapat"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+        <div className="rounded-xl border border-slate-200 p-3">
+          <p className="text-xs text-slate-400">Durum</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1">
+            {STATUS_BADGE[selectedCompany.status].text}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3">
+          <p className="text-xs text-slate-400">Rol</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1">
+            {ROLE_LABELS[selectedCompany.role] || selectedCompany.role}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3">
+          <p className="text-xs text-slate-400">Vergi / Kimlik No</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1">
+            {selectedCompany.tax_no || 'Belirtilmemiş'}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3">
+          <p className="text-xs text-slate-400">Telefon</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1">
+            {selectedCompany.phone || 'Belirtilmemiş'}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3">
+          <p className="text-xs text-slate-400">Şehir</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1">
+            {selectedCompany.city || 'Belirtilmemiş'}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3">
+          <p className="text-xs text-slate-400">Başvuru Tarihi</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1">
+            {new Date(selectedCompany.created_at).toLocaleString('tr-TR')}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3 sm:col-span-2">
+          <p className="text-xs text-slate-400">Adres</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1 whitespace-pre-wrap">
+            {selectedCompany.address || 'Belirtilmemiş'}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-3 sm:col-span-2">
+          <p className="text-xs text-slate-400">Web Sitesi</p>
+          <p className="text-sm font-semibold text-slate-800 mt-1 break-all">
+            {selectedCompany.website || 'Belirtilmemiş'}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-xl border border-slate-200 p-4">
+        <p className="text-sm font-bold text-slate-900">
+          Moderasyon Durumu
+        </p>
+
+        <div className="mt-2 space-y-1 text-sm text-slate-600">
+          <p>Toplam ret: {selectedCompany.rejection_count}</p>
+
+          {selectedCompany.blocked_until &&
+            !selectedCompany.is_permanently_blocked && (
+              <p className="text-red-600">
+                Geçici engel bitişi:{' '}
+                {new Date(
+                  selectedCompany.blocked_until
+                ).toLocaleString('tr-TR')}
+              </p>
+            )}
+
+          {selectedCompany.is_permanently_blocked && (
+            <p className="font-semibold text-red-700">
+              Firma kalıcı olarak engellenmiştir.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {rejectionHistory.some(
+        (item) => item.company_id === selectedCompany.id
+      ) && (
+        <div className="mt-5">
+          <p className="text-sm font-bold text-red-700">
+            Ret geçmişi
+          </p>
+
+          <div className="mt-2 space-y-2">
+            {rejectionHistory
+              .filter(
+                (item) => item.company_id === selectedCompany.id
+              )
+              .map((item, index) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-red-200 bg-red-50 p-3"
+                >
+                  <p className="text-sm font-medium text-red-700">
+                    {index + 1}.{' '}
+                    {item.reason || 'Ret nedeni belirtilmemiş.'}
+                  </p>
+
+                  <p className="mt-1 text-xs text-red-500">
+                    {new Date(item.created_at).toLocaleString('tr-TR')}
+                  </p>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setSelectedCompany(null)}
+        className="w-full mt-6 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
+      >
+        Kapat
+      </button>
+    </div>
+  </div>
+)}
 
       {rejectingCompany && (
         <div className="fixed inset-0 z-50 bg-slate-950/50 flex items-center justify-center p-4">

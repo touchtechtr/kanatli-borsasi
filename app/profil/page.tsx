@@ -254,11 +254,39 @@ setRejectionHistory(historyData || [])
     </div>
 
     {company.status === 'beklemede' && (
-      <div className="text-xs bg-amber-100 text-amber-900 px-4 py-3 rounded-xl border border-amber-200 font-medium max-w-sm">
-        ⚠️ Hesabınız inceleniyor. Admin onayından sonra borsa
-        üzerinden ilan açıp alım/satım yapabileceksiniz.
+  <div className="text-xs bg-amber-100 text-amber-900 px-4 py-3 rounded-xl border border-amber-200 font-medium max-w-sm space-y-3">
+    <p>
+      ⚠️ Hesabınız inceleniyor. Admin onayından sonra borsa
+      üzerinden ilan açıp alım/satım yapabileceksiniz.
+    </p>
+
+    {rejectionHistory.length > 0 && (
+      <div className="border-t border-amber-300 pt-3">
+        <p className="font-bold">
+          Önceki ret geçmişi:
+        </p>
+
+        <div className="mt-2 space-y-2">
+          {rejectionHistory.map((item, index) => (
+            <div
+              key={item.id}
+              className="rounded-lg border border-amber-300 bg-white/60 px-3 py-2"
+            >
+              <p>
+                {index + 1}.{' '}
+                {item.reason || 'Ret nedeni belirtilmemiş.'}
+              </p>
+
+              <p className="mt-1 text-[11px] text-amber-700">
+                {new Date(item.created_at).toLocaleString('tr-TR')}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     )}
+  </div>
+)}
 
     {company.status === 'reddedildi' && (
       <div className="text-xs bg-red-100 text-red-900 px-4 py-3 rounded-xl border border-red-200 font-medium max-w-sm space-y-2">
