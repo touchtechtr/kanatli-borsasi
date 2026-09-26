@@ -19,6 +19,13 @@ type Company = {
   created_at: string
 }
 
+interface RejectionHistory {
+  id: string
+  company_id: string
+  reason: string | null
+  created_at: string
+}
+
 type FilterTab = 'beklemede' | 'onaylandi' | 'reddedildi' | 'hepsi'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -61,6 +68,7 @@ export default function AdminFirmaOnayPage() {
 
   const [loading, setLoading] = useState(true)
   const [companies, setCompanies] = useState<Company[]>([])
+  const [rejectionHistory, setRejectionHistory] = useState<RejectionHistory[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<FilterTab>('beklemede')
   const [actionError, setActionError] = useState<string | null>(null)
@@ -85,18 +93,30 @@ export default function AdminFirmaOnayPage() {
 
   const fetchCompanies = async () => {
     setLoading(true)
-
+  
     const { data, error } = await supabase
       .from('companies')
       .select('*')
       .order('created_at', { ascending: false })
-
+  
+    const { data: historyData, error: historyError } = await supabase
+      .from('company_moderation_history')
+      .select('id, company_id, reason, created_at')
+      .eq('action', 'reddedildi')
+      .order('created_at', { ascending: false })
+  
     if (error) {
       setActionError('Firmalar yüklenemedi: ' + error.message)
     } else {
       setCompanies((data ?? []) as Company[])
     }
-
+  
+    if (historyError) {
+      setActionError('Ret geçmişi yüklenemedi: ' + historyError.message)
+    } else {
+      setRejectionHistory((historyData ?? []) as RejectionHistory[])
+    }
+  
     setLoading(false)
   }
 
@@ -298,13 +318,32 @@ export default function AdminFirmaOnayPage() {
                       )}
                     </p>
 
-                    {company.status === 'reddedildi' &&
-                      company.last_rejection_reason && (
-                        <p className="text-xs text-red-600 mt-2 font-medium">
-                          Ret nedeni: {company.last_rejection_reason}
-                        </p>
-                      )}
+                    {rejectionHistory.some(
+  (item) => item.company_id === company.id
+) && (
+  <div className="mt-3 space-y-2">
+    <p className="text-xs font-bold text-red-700">
+      Ret geçmişi:
+    </p>
 
+    {rejectionHistory
+      .filter((item) => item.company_id === company.id)
+      .map((item, index) => (
+        <div
+          key={item.id}
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2"
+        >
+          <p className="text-xs font-medium text-red-700">
+            {index + 1}. {item.reason || 'Ret nedeni belirtilmemiş.'}
+          </p>
+
+          <p className="mt-1 text-[11px] text-red-500">
+            {new Date(item.created_at).toLocaleString('tr-TR')}
+          </p>
+        </div>
+      ))}
+  </div>
+)}
                     {company.blocked_until &&
                       !company.is_permanently_blocked && (
                         <p className="text-xs text-red-500 mt-1">
