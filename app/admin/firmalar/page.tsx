@@ -177,6 +177,34 @@ export default function AdminFirmaOnayPage() {
     )
   }
 
+  const handleUnblockCompany = async (company: Company) => {
+    const confirmed = window.confirm(
+      `${company.name} firmasının engelini kaldırmak istediğinizden emin misiniz? Ret sayısı ve geçmişi silinmeyecektir.`
+    )
+  
+    if (!confirmed) return
+  
+    setProcessingId(company.id)
+    setActionError(null)
+  
+    const { data, error } = await supabase.rpc(
+      'admin_unblock_company',
+      {
+        target_company_id: company.id
+      }
+    )
+  
+    if (error) {
+      setActionError('Engel kaldırılamadı: ' + error.message)
+    } else {
+      alert(data || 'Firma engeli başarıyla kaldırıldı.')
+      setSelectedCompany(null)
+      await fetchCompanies()
+    }
+  
+    setProcessingId(null)
+  }
+
   const filteredCompanies =
     activeTab === 'hepsi'
       ? companies
@@ -365,7 +393,20 @@ export default function AdminFirmaOnayPage() {
                       )}
                   </div>
 
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex flex-wrap gap-2 flex-shrink-0">
+
+                  {blocked && !ownCompany && (
+  <button
+    type="button"
+    onClick={() => handleUnblockCompany(company)}
+    disabled={processingId === company.id}
+    className="px-3 py-2 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+  >
+    {processingId === company.id
+      ? 'İşleniyor...'
+      : 'Engeli Kaldır'}
+  </button>
+)}
                     <button
                       onClick={() =>
                         handleStatusChange(company.id, 'onaylandi')
