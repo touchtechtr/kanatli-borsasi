@@ -120,6 +120,52 @@ setRejectionHistory(historyData || [])
     setSaving(false)
   }
 
+  const handleRequestReview = async () => {
+    if (!company || !user) return
+  
+    if (company.is_permanently_blocked) {
+      alert('Firmanız kalıcı olarak engellendi. Yöneticiyle iletişime geçmelisiniz.')
+      return
+    }
+  
+    if (
+      company.blocked_until &&
+      new Date(company.blocked_until).getTime() > Date.now()
+    ) {
+      alert(
+        'Engel süresi dolmadan yeniden inceleme talebi gönderemezsiniz.'
+      )
+      return
+    }
+  
+    const confirmed = window.confirm(
+      'Firma bilgilerinizi güncellediğinizden emin misiniz? Yeniden inceleme talebi gönderilsin mi?'
+    )
+  
+    if (!confirmed) return
+  
+    setSaving(true)
+  
+    const { error } = await supabase
+      .from('companies')
+      .update({
+        status: 'beklemede',
+        is_approved: false
+      })
+      .eq('id', company.id)
+      .eq('user_id', user.id)
+      .eq('status', 'reddedildi')
+  
+    if (error) {
+      alert('İnceleme talebi gönderilemedi: ' + error.message)
+    } else {
+      alert('Firmanız yeniden incelemeye gönderildi.')
+      await fetchUserData()
+    }
+  
+    setSaving(false)
+  }
+
   if (loading) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Yükleniyor...</div>
   }
@@ -269,14 +315,27 @@ setRejectionHistory(historyData || [])
             için platform yönetimiyle iletişime geçin.
           </p>
         )}
-
+        
         {!company.is_permanently_blocked &&
           (!company.blocked_until ||
             new Date(company.blocked_until).getTime() <= Date.now()) && (
-            <p>
-              Firma bilgilerinizi düzelttikten sonra yeniden inceleme
-              talebi gönderebilirsiniz.
-            </p>
+            <div className="space-y-3 pt-2">
+              <p>
+                Firma bilgilerinizi düzelttikten sonra yeniden inceleme
+                talebi gönderebilirsiniz.
+              </p>
+        
+              <button
+                type="button"
+                onClick={handleRequestReview}
+                disabled={saving}
+                className="w-full rounded-lg bg-red-700 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving
+                  ? 'Gönderiliyor...'
+                  : 'Yeniden İncelemeye Gönder'}
+              </button>
+            </div>
           )}
       </div>
     )}
