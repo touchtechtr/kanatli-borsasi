@@ -146,20 +146,14 @@ setRejectionHistory(historyData || [])
   
     setSaving(true)
   
-    const { error } = await supabase
-      .from('companies')
-      .update({
-        status: 'beklemede',
-        is_approved: false
-      })
-      .eq('id', company.id)
-      .eq('user_id', user.id)
-      .eq('status', 'reddedildi')
+    const { data, error } = await supabase.rpc(
+      'request_company_review'
+    )
   
     if (error) {
       alert('İnceleme talebi gönderilemedi: ' + error.message)
     } else {
-      alert('Firmanız yeniden incelemeye gönderildi.')
+      alert(data || 'Firmanız yeniden incelemeye gönderildi.')
       await fetchUserData()
     }
   
