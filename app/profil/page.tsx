@@ -3,37 +3,24 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-
-interface Company {
-  id: string
-  name: string
-  role: string
-  city: string
-  tax_no: string
-  phone: string
-  address: string
-  website: string
-  status: 'beklemede' | 'onaylandi' | 'reddedildi'
-  rejection_count: number
-  last_rejection_reason: string | null
-  blocked_until: string | null
-  is_permanently_blocked: boolean
-}
-
-interface RejectionHistory {
-  id: string
-  reason: string | null
-  created_at: string
-}
+import type {
+  Company,
+  CompanyModerationHistory,
+} from '@/types/company'
+import {
+  COMPANY_ROLES,
+  ROLE_LABELS,
+} from '@/constants/company'
 
 export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
-  const [rejectionHistory, setRejectionHistory] = useState<RejectionHistory[]>([])
+  const [rejectionHistory, setRejectionHistory] =
+    useState<CompanyModerationHistory[]>([])
   
   // Form alanları (İletişim ve Şirket detayları)
   const [formData, setFormData] = useState({
@@ -53,34 +40,39 @@ export default function ProfilePage() {
 
   const fetchUserData = async () => {
     setLoading(true)
-    const { data: { session } } = await supabase.auth.getSession()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     
-    if (!session) {
+    if (!user) {
       router.push('/auth')
+      setLoading(false)
       return
     }
 
-    setUser(session.user)
+    setUserId(user.id)
 
     const { data: compData } = await supabase
       .from('companies')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (compData) {
       const { data: historyData } = await supabase
         .from('company_moderation_history')
-        .select('id, reason, created_at')
+        .select('id, company_id, reason, created_at')
        .eq('company_id', compData.id)
        .eq('action', 'reddedildi')
        .order('created_at', { ascending: false })
 
-setRejectionHistory(historyData || [])
-      setCompany(compData)
+      setRejectionHistory(
+        (historyData ?? []) as CompanyModerationHistory[]
+      )
+      setCompany(compData as Company)
       setFormData({
         name: compData.name || '',
-        role: compData.role || 'Çiftçi / Yetiştirici',
+        role: compData.role || 'ciftci',
         city: compData.city || 'Antalya',
         tax_no: compData.tax_no || '',
         phone: compData.phone || '',
@@ -93,11 +85,11 @@ setRejectionHistory(historyData || [])
 
   const handleSaveCompany = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    if (!userId) return
     setSaving(true)
 
     const payload = {
-      user_id: user.id,
+      user_id: userId,
       name: formData.name,
       role: formData.role,
       city: formData.city,
@@ -121,7 +113,7 @@ setRejectionHistory(historyData || [])
   }
 
   const handleRequestReview = async () => {
-    if (!company || !user) return
+    if (!company || !userId) return
   
     if (company.is_permanently_blocked) {
       alert('Firmanız kalıcı olarak engellendi. Yöneticiyle iletişime geçmelisiniz.')
@@ -248,7 +240,8 @@ setRejectionHistory(historyData || [])
       </h2>
 
       <p className="text-xs text-slate-600">
-        Rol: {company.role} | Şehir: {company.city}
+        Rol: {ROLE_LABELS[company.role] || company.role} | Şehir:{' '}
+        {company.city || 'Belirtilmemiş'}
         {company.phone && ` | Tel: ${company.phone}`}
       </p>
     </div>
@@ -409,11 +402,13 @@ setRejectionHistory(historyData || [])
                 onChange={e => setFormData({...formData, role: e.target.value})}
                 className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50 font-medium"
               >
-                <option value="ciftci">Çiftçi / Yetiştirici</option>
-                <option value="tuccar">Tüccar / Alıcı</option>
-                <option value="tedarikci">Yem Fabrikası / Tedarikçi</option>
-                <option value="entegre">Entegre Tesis / Kesimhane</option>
-                <option value="uzman">Bağımsız Uzman / Veteriner</option>
+                {COMPANY_ROLES.filter(
+                  (role) => role.value !== 'admin'
+                ).map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
               </select>
             </div>
 
