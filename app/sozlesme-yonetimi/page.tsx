@@ -8,6 +8,7 @@ interface Company {
   id: string
   name: string
   role: string
+  status: 'beklemede' | 'onaylandi' | 'reddedildi'
 }
 
 interface ContractFarming {
@@ -64,7 +65,7 @@ export default function ContractManagementPage() {
     // Kullanıcının firmalarını çek
     const { data: compData } = await supabase
       .from('companies')
-      .select('id, name, role')
+      .select('id, name, role, status')
       .eq('user_id', session.user.id)
       .order('name', { ascending: true })
 
@@ -140,6 +141,24 @@ export default function ContractManagementPage() {
     e.preventDefault()
     if (!selectedCompanyId) {
       alert('Lütfen işlem yapacak bir firma seçin veya profilinizden firma oluşturun.')
+      return
+    }
+
+    const selectedCompany = companies.find(
+      (company) => company.id === selectedCompanyId
+    )
+    
+    if (!selectedCompany) {
+      alert('Seçilen firma bulunamadı.')
+      return
+    }
+    
+    if (selectedCompany.status !== 'onaylandi') {
+      alert(
+        selectedCompany.status === 'reddedildi'
+          ? 'Firma başvurunuz reddedildiği için sözleşme teklifi yayınlayamazsınız. Lütfen firma bilgilerinizi düzeltip yeniden incelemeye gönderin.'
+          : 'Sözleşme teklifi yayınlamak için firmanızın yönetici tarafından onaylanması gerekiyor.'
+      )
       return
     }
 

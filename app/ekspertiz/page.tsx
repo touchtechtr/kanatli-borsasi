@@ -25,6 +25,7 @@ interface Company {
   id: string
   name: string
   role: string
+  status: 'beklemede' | 'onaylandi' | 'reddedildi'
 }
 
 export default function ExpertizPage() {
@@ -59,7 +60,7 @@ export default function ExpertizPage() {
       setUser(session.user)
       const { data: compData } = await supabase
         .from('companies')
-        .select('id, name, role')
+        .select('id, name, role, status')
         .eq('user_id', session.user.id)
 
       if (compData && compData.length > 0) {
@@ -131,7 +132,31 @@ export default function ExpertizPage() {
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) { router.push('/auth'); return; }
-    if (!userCompanyId) { alert('Lütfen önce bir şirket profili seçin/oluşturun.'); router.push('/profil'); return; }
+
+    if (!userCompanyId) {
+      alert('Lütfen önce bir şirket profili seçin/oluşturun.')
+      router.push('/profil')
+      return
+    }
+
+    const selectedCompany = companies.find(
+      (company) => company.id === userCompanyId
+    )
+    
+    if (!selectedCompany) {
+      alert('Firma bilgileriniz bulunamadı.')
+      router.push('/profil')
+      return
+    }
+    
+    if (selectedCompany.status !== 'onaylandi') {
+      alert(
+        selectedCompany.status === 'reddedildi'
+          ? 'Firma başvurunuz reddedildiği için ekspertiz talebi oluşturamazsınız. Lütfen firma bilgilerinizi düzeltip yeniden incelemeye gönderin.'
+          : 'Ekspertiz talebi oluşturmak için firmanızın yönetici tarafından onaylanması gerekiyor.'
+      )
+      return
+    }
 
     const form = e.target as any
     const { error } = await supabase.from('expert_requests').insert([

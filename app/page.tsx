@@ -32,6 +32,7 @@ interface Company {
   id: string
   name: string
   role: string
+  status: 'beklemede' | 'onaylandi' | 'reddedildi'
 }
 
 interface MarketPrice {
@@ -122,7 +123,7 @@ function HomeContent() {
       setUser(session.user)
       const { data: compData } = await supabase
         .from('companies')
-        .select('id, name, role')
+        .select('id, name, role, status')
         .eq('user_id', session.user.id)
         .order('name', { ascending: true })
 
