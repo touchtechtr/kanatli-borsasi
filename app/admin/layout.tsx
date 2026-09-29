@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import {
+  redirect,
+  useRouter,
+  usePathname,
+} from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Building2, Megaphone, Users, Settings, ArrowLeft } from 'lucide-react'
@@ -28,7 +32,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const checkAccess = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
-      router.push('/auth')
+      window.location.replace('/auth')
       return
     }
     const { data: profile } = await supabase
@@ -50,23 +54,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-        <div className="max-w-sm w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-100 text-center">
-          <h1 className="text-lg font-bold text-slate-900 mb-2">Erişim Yetkiniz Yok</h1>
-          <p className="text-sm text-slate-500">
-            Bu alan sadece platform yöneticileri içindir.
-          </p>
-          <Link
-            href="/"
-            className="inline-block mt-4 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-          >
-            ← Borsaya Dön
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  redirect('/profil')
+}
 
   return (
     <div className="flex min-h-screen bg-slate-50">

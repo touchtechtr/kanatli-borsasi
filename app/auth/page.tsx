@@ -28,18 +28,49 @@ export default function AuthPage() {
     const supabase = createClient()
 
     if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-
+      
       if (error) {
-        setError('Giriş başarısız: ' + error.message)
+        if (error.message === 'Email not confirmed') {
+          setError(
+            'E-posta adresiniz henüz onaylanmadı. Lütfen giriş yapmadan önce e-posta adresinize gönderilen bağlantıya tıklayarak hesabınızı onaylayın.'
+          )
+        } else if (error.message === 'Invalid login credentials') {
+          setError('E-posta adresiniz veya şifreniz hatalı.')
+        } else {
+          setError(
+            'Giriş işlemi başarısız oldu. Lütfen tekrar deneyin.'
+          )
+        }
+      
         setLoading(false)
-      } else {
-        router.push('/')
-        router.refresh()
+        return
       }
+      
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', data.user.id)
+        .maybeSingle()
+      
+      if (profileError) {
+        setError(
+          'Kullanıcı yetkisi kontrol edilemedi: ' +
+            profileError.message
+        )
+        setLoading(false)
+        return
+      }
+      
+      setLoading(false)
+
+      window.location.replace(
+        profile?.is_admin ? '/admin/firmalar' : '/'
+      )
+      return
     } else {
       
 
@@ -60,7 +91,9 @@ export default function AuthPage() {
         setError(signUpError.message)
         setLoading(false)
       } else {
-        alert('Kayıt başarılı! Giriş yapabilirsiniz.')
+        alert(
+          'Kayıt başarılı! E-posta adresinize gönderilen bağlantıya tıklayarak hesabınızı onayladıktan sonra giriş yapabilirsiniz.'
+        )
         setIsLogin(true)
       }
     }

@@ -55,34 +55,68 @@ export default function AdminFirmaOnayPage() {
   const loadPage = async () => {
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    setCurrentUserId(user?.id ?? null)
+    if (userError || !user) {
+      setLoading(false)
+      window.location.replace('/auth')
+      return
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profileError) {
+      console.error('Admin yetki kontrolü hatası:', profileError)
+      setActionError(
+        'Admin yetkisi kontrol edilemedi: ' + profileError.message
+      )
+      setLoading(false)
+      return
+    }
+
+    if (!profile?.is_admin) {
+      setLoading(false)
+      window.location.replace('/profil')
+      return
+    }
+
+    setCurrentUserId(user.id)
     await fetchCompanies()
   }
 
   const fetchCompanies = async () => {
     setLoading(true)
+    setActionError(null)
   
     const { data, error } = await supabase
       .from('companies')
       .select('*')
       .order('created_at', { ascending: false })
   
-    const { data: historyData, error: historyError } = await supabase
-      .from('company_moderation_history')
-      .select('id, company_id, reason, created_at')
-      .eq('action', 'reddedildi')
-      .order('created_at', { ascending: false })
+    const { data: historyData, error: historyError } =
+      await supabase
+        .from('company_moderation_history')
+        .select('id, company_id, reason, created_at')
+        .eq('action', 'reddedildi')
+        .order('created_at', { ascending: false })
   
     if (error) {
-      setActionError('Firmalar yüklenemedi: ' + error.message)
+      setActionError(
+        'Firmalar yüklenemedi: ' + error.message
+      )
     } else {
       setCompanies((data ?? []) as Company[])
     }
   
     if (historyError) {
-      setActionError('Ret geçmişi yüklenemedi: ' + historyError.message)
+      setActionError(
+        'Ret geçmişi yüklenemedi: ' + historyError.message
+      )
     } else {
       setRejectionHistory(
         (historyData ?? []) as CompanyModerationHistory[]
@@ -90,6 +124,40 @@ export default function AdminFirmaOnayPage() {
     }
   
     setLoading(false)
+  }
+  const sendModerationEmail = async (
+    companyId: string,
+    event: 'approved' | 'rejected' | 'unblocked'
+  ) => {
+    const {
+      data: { session }
+    } = await supabase.auth.getSession()
+  
+    if (!session?.access_token) {
+      throw new Error('Admin oturumu bulunamadı.')
+    }
+  
+    const response = await fetch('/api/email/moderation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        companyId,
+        event
+      })
+    })
+  
+    const result = await response.json()
+  
+    if (!response.ok) {
+      throw new Error(
+        result.error || 'E-posta gönderilemedi.'
+      )
+    }
+  
+    return result
   }
 
   const handleStatusChange = async (
@@ -128,6 +196,23 @@ export default function AdminFirmaOnayPage() {
       setRejectingCompany(null)
       setRejectionReason('')
       await fetchCompanies()
+
+      try {
+        await sendModerationEmail(
+          companyId,
+          newStatus === 'onaylandi'
+            ? 'approved'
+            : 'rejected'
+        )
+      } catch (emailError) {
+        setActionError(
+          `Firma işlemi tamamlandı ancak e-posta gönderilemedi: ${
+            emailError instanceof Error
+              ? emailError.message
+              : 'Bilinmeyen hata'
+          }`
+        )
+      }
     }
 
     setProcessingId(null)
@@ -164,11 +249,25 @@ export default function AdminFirmaOnayPage() {
     )
   
     if (error) {
-      setActionError('Engel kaldırılamadı: ' + error.message)
+      setActionError(
+        'Engel kaldırılamadı: ' + error.message
+      )
     } else {
       alert(data || 'Firma engeli başarıyla kaldırıldı.')
       setSelectedCompany(null)
       await fetchCompanies()
+  
+      try {
+        await sendModerationEmail(company.id, 'unblocked')
+      } catch (emailError) {
+        setActionError(
+          `Firma engeli kaldırıldı ancak e-posta gönderilemedi: ${
+            emailError instanceof Error
+              ? emailError.message
+              : 'Bilinmeyen hata'
+          }`
+        )
+      }
     }
   
     setProcessingId(null)

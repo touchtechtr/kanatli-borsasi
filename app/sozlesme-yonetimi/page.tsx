@@ -78,11 +78,62 @@ export default function ContractManagementPage() {
   }
 
   const fetchContracts = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('contract_farming')
-      .select(`id, company_id, title, region, capacity_required, model_type, duration_months, status, companies ( name, role )`)
+      .select(
+        'id, company_id, title, region, capacity_required, model_type, duration_months, status'
+      )
       .order('created_at', { ascending: false })
-    setContracts(data || [])
+  
+    if (error) {
+      console.error(
+        'Sözleşme teklifleri yüklenemedi:',
+        error
+      )
+      setContracts([])
+      return
+    }
+  
+    const companyIds = [
+      ...new Set(
+        (data ?? [])
+          .map((item) => item.company_id)
+          .filter(Boolean)
+      ),
+    ]
+  
+    const { data: publicCompanies, error: companyError } =
+      companyIds.length > 0
+        ? await supabase
+            .from('public_companies')
+            .select('id, name, role')
+            .in('id', companyIds)
+        : { data: [], error: null }
+  
+    if (companyError) {
+      console.error(
+        'Firma bilgileri yüklenemedi:',
+        companyError
+      )
+    }
+  
+    const companyMap = new Map(
+      (publicCompanies ?? []).map((company) => [
+        company.id,
+        {
+          name: company.name,
+          role: company.role,
+        },
+      ])
+    )
+  
+    const safeContracts = (data ?? []).map((contract) => ({
+      ...contract,
+      companies:
+        companyMap.get(contract.company_id) ?? null,
+    }))
+  
+    setContracts(safeContracts)
   }
 
   const handleCreateContract = async (e: React.FormEvent) => {

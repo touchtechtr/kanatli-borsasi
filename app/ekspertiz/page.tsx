@@ -73,11 +73,59 @@ export default function ExpertizPage() {
   }
 
   const fetchRequests = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('expert_requests')
-      .select(`id, service_type, title, description, city, status, created_at, companies ( name, role )`)
+      .select(
+        'id, company_id, service_type, title, description, city, status, created_at'
+      )
       .order('created_at', { ascending: false })
-    setRequests(data || [])
+  
+    if (error) {
+      console.error('Ekspertiz talepleri yüklenemedi:', error)
+      setRequests([])
+      return
+    }
+  
+    const companyIds = [
+      ...new Set(
+        (data ?? [])
+          .map((item) => item.company_id)
+          .filter(Boolean)
+      ),
+    ]
+  
+    const { data: publicCompanies, error: companyError } =
+      companyIds.length > 0
+        ? await supabase
+            .from('public_companies')
+            .select('id, name, role')
+            .in('id', companyIds)
+        : { data: [], error: null }
+  
+    if (companyError) {
+      console.error(
+        'Firma bilgileri yüklenemedi:',
+        companyError
+      )
+    }
+  
+    const companyMap = new Map(
+      (publicCompanies ?? []).map((company) => [
+        company.id,
+        {
+          name: company.name,
+          role: company.role,
+        },
+      ])
+    )
+  
+    const safeRequests = (data ?? []).map((request) => ({
+      ...request,
+      companies:
+        companyMap.get(request.company_id) ?? null,
+    }))
+  
+    setRequests(safeRequests)
   }
 
   const handleCreateRequest = async (e: React.FormEvent) => {
