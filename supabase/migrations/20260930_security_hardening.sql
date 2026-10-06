@@ -272,3 +272,78 @@ using (
 );
 
 commit;
+-- =====================================================
+-- Kesimhane randevuları
+-- =====================================================
+
+begin;
+
+alter table public.slaughter_appointments
+enable row level security;
+
+drop policy if exists "Herkes randevuları okuyabilir"
+on public.slaughter_appointments;
+
+drop policy if exists "Oturum açanlar randevu oluşturabilir"
+on public.slaughter_appointments;
+
+drop policy if exists "Kullanıcı kendi randevusunu güncelleyebilir"
+on public.slaughter_appointments;
+
+drop policy if exists slaughter_appointments_select_authorized
+on public.slaughter_appointments;
+
+drop policy if exists slaughter_appointments_insert_approved
+on public.slaughter_appointments;
+
+create policy slaughter_appointments_select_authorized
+on public.slaughter_appointments
+for select
+to authenticated
+using (
+  user_id = auth.uid()
+
+  or exists (
+    select 1
+    from public.slaughterhouses sh
+    join public.companies c
+      on c.id = sh.company_id
+    where sh.id =
+      slaughter_appointments.slaughterhouse_id
+      and c.user_id = auth.uid()
+  )
+
+  or exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.is_admin = true
+  )
+);
+
+create policy slaughter_appointments_insert_approved
+on public.slaughter_appointments
+for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and status = 'Onay Bekliyor'
+
+  and exists (
+    select 1
+    from public.companies c
+    where c.id = slaughter_appointments.company_id
+      and c.user_id = auth.uid()
+      and c.status = 'onaylandi'::company_status
+  )
+
+  and exists (
+    select 1
+    from public.slaughterhouses sh
+    where sh.id =
+      slaughter_appointments.slaughterhouse_id
+      and sh.status = 'Aktif'
+  )
+);
+
+commit;

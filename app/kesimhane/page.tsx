@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 
 interface Slaughterhouse {
   id: string
+  company_id: string | null
   name: string
   city: string
   daily_capacity: number
@@ -37,6 +38,7 @@ interface Company {
   id: string
   name: string
   role: string
+  status: 'beklemede' | 'onaylandi' | 'reddedildi'
 }
 
 export default function KesimhanePage() {
@@ -65,7 +67,7 @@ export default function KesimhanePage() {
       setUser(session.user)
       const { data: compData } = await supabase
         .from('companies')
-        .select('id, name, role')
+        .select('id, name, role, status')
         .eq('user_id', session.user.id)
 
       if (compData && compData.length > 0) {
@@ -79,27 +81,139 @@ export default function KesimhanePage() {
   }
 
   const fetchData = async () => {
-    const { data: houseData } = await supabase
-      .from('slaughterhouses')
-      .select('*')
-      .order('name', { ascending: true })
-    setSlaughterhouses(houseData || [])
-
-    if (houseData && houseData.length > 0) {
-      setSelectedHouse(houseData[0].id)
+    const { data: houseData, error: houseError } =
+      await supabase
+        .from('slaughterhouses')
+        .select('*')
+        .eq('status', 'Aktif')
+        .order('name', { ascending: true })
+  
+    if (houseError) {
+      console.error(
+        'Kesimhaneler yüklenemedi:',
+        houseError
+      )
+      setSlaughterhouses([])
+    } else {
+      setSlaughterhouses(houseData ?? [])
+  
+      if (houseData && houseData.length > 0) {
+        setSelectedHouse((currentHouse) =>
+          currentHouse &&
+          houseData.some(
+            (house) => house.id === currentHouse
+          )
+            ? currentHouse
+            : houseData[0].id
+        )
+      } else {
+        setSelectedHouse('')
+      }
     }
-
-    const { data: appData } = await supabase
-      .from('slaughter_appointments')
-      .select(`id, flock_size, appointment_date, status, notes, slaughterhouses ( name, city ), companies ( name )`)
-      .order('appointment_date', { ascending: true })
-    setAppointments(appData || [])
+  
+    const { data: appData, error: appointmentError } =
+      await supabase
+        .from('slaughter_appointments')
+        .select(
+          'id, company_id, flock_size, appointment_date, status, notes, slaughterhouses ( name, city )'
+        )
+        .order('appointment_date', { ascending: true })
+  
+    if (appointmentError) {
+      console.error(
+        'Randevular yüklenemedi:',
+        appointmentError
+      )
+      setAppointments([])
+      return
+    }
+  
+    const companyIds = [
+      ...new Set(
+        (appData ?? [])
+          .map(
+            (appointment) => appointment.company_id
+          )
+          .filter(Boolean)
+      ),
+    ]
+  
+    const { data: publicCompanies, error: companyError } =
+      companyIds.length > 0
+        ? await supabase
+            .from('public_companies')
+            .select('id, name')
+            .in('id', companyIds)
+        : { data: [], error: null }
+  
+    if (companyError) {
+      console.error(
+        'Randevu firma bilgileri yüklenemedi:',
+        companyError
+      )
+    }
+  
+    const companyMap = new Map(
+      (publicCompanies ?? []).map((company) => [
+        company.id,
+        { name: company.name },
+      ])
+    )
+  
+    const safeAppointments = (appData ?? []).map(
+      (appointment) => ({
+        ...appointment,
+        companies:
+          companyMap.get(appointment.company_id) ?? null,
+      })
+    )
+  
+    setAppointments(
+      safeAppointments as Appointment[]
+    )
   }
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) { router.push('/auth'); return; }
     if (!userCompanyId) { alert('Lütfen önce bir şirket profili seçin/oluşturun.'); router.push('/profil'); return; }
+    const selectedCompany = companies.find(
+      (company) => company.id === userCompanyId
+    )
+    
+    if (!selectedCompany) {
+      alert('Firma bilgileriniz bulunamadı.')
+      router.push('/profil')
+      return
+    }
+    
+    if (selectedCompany.status !== 'onaylandi') {
+      alert(
+        selectedCompany.status === 'reddedildi'
+          ? 'Firma başvurunuz reddedildiği için kesim randevusu oluşturamazsınız. Lütfen firma bilgilerinizi düzeltip yeniden incelemeye gönderin.'
+          : 'Kesim randevusu oluşturmak için firmanızın yönetici tarafından onaylanması gerekiyor.'
+      )
+      return
+    }
+    
+    if (!selectedHouse) {
+      alert('Lütfen bir kesimhane seçin.')
+      return
+    }
+    
+    const selectedSlaughterhouse = slaughterhouses.find(
+      (house) => house.id === selectedHouse
+    )
+    
+    if (
+      !selectedSlaughterhouse ||
+      selectedSlaughterhouse.status !== 'Aktif'
+    ) {
+      alert(
+        'Seçilen kesimhane şu anda randevu kabul etmiyor.'
+      )
+      return
+    }
 
     const form = e.target as any
     const { error } = await supabase.from('slaughter_appointments').insert([
