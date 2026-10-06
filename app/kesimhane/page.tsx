@@ -249,6 +249,13 @@ export default function KesimhanePage() {
     return comp.name;
   };
 
+  const currentCompany = companies.find(
+    (company) => company.id === userCompanyId
+  )
+  
+  const canCreateAppointment =
+    currentCompany?.status === 'onaylandi'
+
   if (!mounted) return null;
 
   return (
@@ -268,26 +275,51 @@ export default function KesimhanePage() {
           </div>
           
           <div className="flex items-center gap-3">
-            {user ? (
-              <button 
-                onClick={() => setShowAppointmentForm(!showAppointmentForm)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all shadow-sm"
-              >
-                {showAppointmentForm ? '✕ Kapat' : '+ Kesim Randevusu Al'}
-              </button>
-            ) : (
-              <button 
-                onClick={() => router.push('/auth')}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all shadow-sm"
-              >
-                Giriş Yap ve Randevu Al
-              </button>
-            )}
+          {user ? (
+  canCreateAppointment ? (
+    <button
+      onClick={() =>
+        setShowAppointmentForm(
+          !showAppointmentForm
+        )
+      }
+      className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all shadow-sm"
+    >
+      {showAppointmentForm
+        ? '✕ Kapat'
+        : '+ Kesim Randevusu Al'}
+    </button>
+  ) : (
+    <div className="text-right">
+      <button
+        type="button"
+        disabled
+        className="bg-amber-100 text-amber-800 px-5 py-2.5 rounded-xl font-medium text-sm border border-amber-200 cursor-not-allowed"
+      >
+        Firma Onayı Gerekli
+      </button>
+
+      <p className="text-xs text-amber-700 mt-1 max-w-xs">
+        Kesim randevusu oluşturabilmek için firmanızın
+        yönetici tarafından onaylanması gerekir.
+      </p>
+    </div>
+  )
+) : (
+  <button
+    onClick={() => router.push('/auth')}
+    className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-all shadow-sm"
+  >
+    Giriş Yap ve Randevu Al
+  </button>
+)}
           </div>
         </div>
 
         {/* Randevu Formu */}
-        {showAppointmentForm && user && (
+        {showAppointmentForm &&
+  user &&
+  canCreateAppointment && (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-200">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Yeni Kesim Randevusu Oluştur</h2>
             <form onSubmit={handleCreateAppointment} className="grid grid-cols-1 md:grid-cols-2 gap-4">
