@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
+  CheckCircle,
   Clock,
   LockKeyhole,
   ShoppingBag,
+  TrendingUp,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -17,10 +19,55 @@ type AccessState =
   | 'rejected'
   | 'wrong-role'
 
+type OfferStatus =
+  | 'beklemede'
+  | 'kabul_edildi'
+  | 'reddedildi'
+  | 'iptal_edildi'
+  | 'tamamlandi'
+
 interface CompanyAccess {
+  id: string
   name: string
   role: string
   status: 'beklemede' | 'onaylandi' | 'reddedildi'
+}
+
+interface TradeOffer {
+  id: string
+  listing_kind: 'listing' | 'livestock' | 'feed'
+  listing_id: string
+  buyer_company_id: string
+  seller_company_id: string
+  product_title: string
+  offered_quantity: number
+  unit: string
+  offered_unit_price: number
+  message: string | null
+  status: OfferStatus
+  created_at: string
+  updated_at: string
+}
+
+const STATUS_LABELS: Record<OfferStatus, string> = {
+  beklemede: 'Beklemede',
+  kabul_edildi: 'Kabul Edildi',
+  reddedildi: 'Reddedildi',
+  iptal_edildi: 'İptal Edildi',
+  tamamlandi: 'Tamamlandı',
+}
+
+const STATUS_STYLES: Record<OfferStatus, string> = {
+  beklemede:
+    'bg-amber-50 text-amber-700 border-amber-200',
+  kabul_edildi:
+    'bg-emerald-50 text-emerald-700 border-emerald-200',
+  reddedildi:
+    'bg-red-50 text-red-700 border-red-200',
+  iptal_edildi:
+    'bg-slate-100 text-slate-600 border-slate-200',
+  tamamlandi:
+    'bg-blue-50 text-blue-700 border-blue-200',
 }
 
 export default function TuccarPanelPage() {
@@ -31,9 +78,16 @@ export default function TuccarPanelPage() {
     useState<AccessState>('loading')
   const [company, setCompany] =
     useState<CompanyAccess | null>(null)
+  const [offers, setOffers] = useState<TradeOffer[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [offersLoading, setOffersLoading] = useState(false)
+  const [processingId, setProcessingId] =
+    useState<string | null>(null)
+  const [pageError, setPageError] =
+    useState<string | null>(null)
 
   useEffect(() => {
-    const checkAccess = async () => {
+    const initializePage = async () => {
       const {
         data: { user },
         error: userError,
@@ -44,45 +98,50 @@ export default function TuccarPanelPage() {
         return
       }
 
-      const { data: companyData, error: companyError } =
-        await supabase
+      const [{ data: companyData, error: companyError }, {
+        data: profileData,
+        error: profileError,
+      }] = await Promise.all([
+        supabase
           .from('companies')
-          .select('name, role, status')
+          .select('id, name, role, status')
           .eq('user_id', user.id)
-          .maybeSingle()
+          .maybeSingle(),
+
+        supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle(),
+      ])
 
       if (companyError || !companyData) {
         window.location.replace('/profil')
         return
       }
 
-      const { data: profileData, error: profileError } =
-  await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .maybeSingle()
+      if (profileError) {
+        console.error(
+          'Yönetici yetkisi kontrol edilemedi:',
+          profileError.message
+        )
+      }
 
-if (profileError) {
-  console.error(
-    'Yönetici yetkisi kontrol edilemedi:',
-    profileError.message
-  )
-}
+      const adminUser = Boolean(profileData?.is_admin)
 
-setCompany(companyData as CompanyAccess)
+      setCompany(companyData as CompanyAccess)
+      setIsAdmin(adminUser)
 
-// Gerçek yönetici yetkisi profiles.is_admin alanından gelir.
-// Yönetici, kendi firma rolü ne olursa olsun paneli inceleyebilir.
-if (profileData?.is_admin) {
-  setAccessState('approved')
-  return
-}
+      if (adminUser) {
+        setAccessState('approved')
+        await fetchOffers()
+        return
+      }
 
-if (companyData.role !== 'tuccar') {
-  setAccessState('wrong-role')
-  return
-}
+      if (companyData.role !== 'tuccar') {
+        setAccessState('wrong-role')
+        return
+      }
 
       if (companyData.status === 'beklemede') {
         setAccessState('pending')
@@ -95,10 +154,93 @@ if (companyData.role !== 'tuccar') {
       }
 
       setAccessState('approved')
+      await fetchOffers()
     }
 
-    checkAccess()
+    initializePage()
   }, [])
+
+  const fetchOffers = async () => {
+    setOffersLoading(true)
+    setPageError(null)
+
+    const { data, error } = await supabase
+      .from('trade_offers')
+      .select(
+        'id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, offered_unit_price, message, status, created_at, updated_at'
+      )
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setPageError(
+        'Teklifler yüklenemedi: ' + error.message
+      )
+      setOffers([])
+    } else {
+      setOffers((data ?? []) as TradeOffer[])
+    }
+
+    setOffersLoading(false)
+  }
+
+  const handleStatusChange = async (
+    offerId: string,
+    newStatus: OfferStatus
+  ) => {
+    setProcessingId(offerId)
+    setPageError(null)
+
+    const { error } = await supabase
+      .from('trade_offers')
+      .update({ status: newStatus })
+      .eq('id', offerId)
+
+    if (error) {
+      setPageError(
+        'Teklif işlemi tamamlanamadı: ' + error.message
+      )
+    } else {
+      await fetchOffers()
+    }
+
+    setProcessingId(null)
+  }
+
+  const activeOfferCount = useMemo(
+    () =>
+      offers.filter((offer) =>
+        ['beklemede', 'kabul_edildi'].includes(
+          offer.status
+        )
+      ).length,
+    [offers]
+  )
+
+  const completedOfferCount = useMemo(
+    () =>
+      offers.filter(
+        (offer) => offer.status === 'tamamlandi'
+      ).length,
+    [offers]
+  )
+
+  const transactionVolume = useMemo(
+    () =>
+      offers
+        .filter((offer) =>
+          ['kabul_edildi', 'tamamlandi'].includes(
+            offer.status
+          )
+        )
+        .reduce(
+          (total, offer) =>
+            total +
+            Number(offer.offered_quantity) *
+              Number(offer.offered_unit_price),
+          0
+        ),
+    [offers]
+  )
 
   if (accessState === 'loading') {
     return (
@@ -123,7 +265,7 @@ if (companyData.role !== 'tuccar') {
       rejected: {
         title: 'Firma Başvurusu Onaylanmadı',
         description:
-          'Firma bilgilerinizi kontrol edip düzelttikten sonra profil sayfasından yeniden inceleme talebi gönderebilirsiniz.',
+          'Firma bilgilerinizi kontrol edip düzelttikten sonra yeniden inceleme talebi gönderebilirsiniz.',
         icon: LockKeyhole,
         color: 'text-red-600',
         background: 'bg-red-50',
@@ -201,33 +343,302 @@ if (companyData.role !== 'tuccar') {
           </h1>
 
           <p className="mt-1 text-sm text-slate-500">
-            Üreticilerden gelen gerçek teklifleri yönetin ve
-            ticari süreçlerinizi takip edin.
+            Gerçek tekliflerinizi ve anlaşma süreçlerinizi
+            takip edin.
           </p>
+
+          {isAdmin && (
+            <p className="mt-2 text-xs font-semibold text-blue-600">
+              Yönetici görünümü: Sistemdeki tüm teklifler
+              gösteriliyor.
+            </p>
+          )}
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
-            <ShoppingBag className="h-7 w-7 text-emerald-600" />
+        {pageError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {pageError}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <StatCard
+            title="Aktif Teklifler"
+            value={activeOfferCount.toLocaleString('tr-TR')}
+            icon={ShoppingBag}
+            iconClass="bg-emerald-50 text-emerald-600"
+          />
+
+          <StatCard
+            title="İşlem Hacmi"
+            value={transactionVolume.toLocaleString(
+              'tr-TR',
+              {
+                style: 'currency',
+                currency: 'TRY',
+              }
+            )}
+            icon={TrendingUp}
+            iconClass="bg-blue-50 text-blue-600"
+          />
+
+          <StatCard
+            title="Tamamlanan Anlaşmalar"
+            value={completedOfferCount.toLocaleString(
+              'tr-TR'
+            )}
+            icon={CheckCircle}
+            iconClass="bg-amber-50 text-amber-600"
+          />
+        </div>
+
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 p-5">
+            <h2 className="font-bold text-slate-900">
+              Ticari Teklifler
+            </h2>
           </div>
 
-          <h2 className="mt-4 text-lg font-bold text-slate-900">
-            Teklif yönetimi hazırlanıyor
-          </h2>
+          {offersLoading ? (
+            <div className="p-10 text-center text-sm text-slate-500">
+              Teklifler yükleniyor...
+            </div>
+          ) : offers.length === 0 ? (
+            <div className="p-10 text-center">
+              <ShoppingBag className="mx-auto h-10 w-10 text-slate-300" />
 
-          <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
-            Demo kayıtlar kaldırıldı. Bu alanda yalnızca gerçek
-            üretici teklifleri, miktarlar, fiyatlar ve anlaşma
-            durumları gösterilecektir.
-          </p>
+              <h3 className="mt-3 font-semibold text-slate-800">
+                Henüz teklif bulunmuyor
+              </h3>
 
-          {company && (
-            <p className="mt-4 text-xs font-medium text-emerald-700">
-              Onaylı firma: {company.name}
-            </p>
+              <p className="mt-1 text-sm text-slate-500">
+                İlanlardan gönderilen gerçek teklifler burada
+                görüntülenecek.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Teklif</th>
+                    <th className="px-4 py-3">Ürün</th>
+                    <th className="px-4 py-3">Miktar</th>
+                    <th className="px-4 py-3 text-right">
+                      Birim fiyat
+                    </th>
+                    <th className="px-4 py-3 text-center">
+                      Durum
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      İşlemler
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {offers.map((offer) => {
+                    const isBuyer =
+                      offer.buyer_company_id === company?.id
+                    const isSeller =
+                      offer.seller_company_id === company?.id
+
+                    return (
+                      <tr
+                        key={offer.id}
+                        className="hover:bg-slate-50"
+                      >
+                        <td className="px-4 py-4">
+                          <p className="font-semibold text-slate-800">
+                            {isBuyer
+                              ? 'Gönderilen'
+                              : isSeller
+                                ? 'Alınan'
+                                : 'Sistem'}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            {new Date(
+                              offer.created_at
+                            ).toLocaleString('tr-TR')}
+                          </p>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <p className="font-medium text-slate-900">
+                            {offer.product_title}
+                          </p>
+
+                          {offer.message && (
+                            <p className="mt-1 max-w-xs text-xs text-slate-500">
+                              {offer.message}
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-4 text-slate-600">
+                          {Number(
+                            offer.offered_quantity
+                          ).toLocaleString('tr-TR')}{' '}
+                          {offer.unit}
+                        </td>
+
+                        <td className="px-4 py-4 text-right font-semibold text-slate-900">
+                          {Number(
+                            offer.offered_unit_price
+                          ).toLocaleString('tr-TR', {
+                            style: 'currency',
+                            currency: 'TRY',
+                          })}
+                        </td>
+
+                        <td className="px-4 py-4 text-center">
+                          <span
+                            className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[offer.status]}`}
+                          >
+                            {STATUS_LABELS[offer.status]}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            {isSeller &&
+                              offer.status === 'beklemede' && (
+                                <>
+                                  <ActionButton
+                                    label="Kabul Et"
+                                    disabled={
+                                      processingId === offer.id
+                                    }
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                    onClick={() =>
+                                      handleStatusChange(
+                                        offer.id,
+                                        'kabul_edildi'
+                                      )
+                                    }
+                                  />
+
+                                  <ActionButton
+                                    label="Reddet"
+                                    disabled={
+                                      processingId === offer.id
+                                    }
+                                    className="bg-red-50 text-red-700 hover:bg-red-100"
+                                    onClick={() =>
+                                      handleStatusChange(
+                                        offer.id,
+                                        'reddedildi'
+                                      )
+                                    }
+                                  />
+                                </>
+                              )}
+
+                            {isBuyer &&
+                              offer.status === 'beklemede' && (
+                                <ActionButton
+                                  label="İptal Et"
+                                  disabled={
+                                    processingId === offer.id
+                                  }
+                                  className="bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                  onClick={() =>
+                                    handleStatusChange(
+                                      offer.id,
+                                      'iptal_edildi'
+                                    )
+                                  }
+                                />
+                              )}
+
+                            {isSeller &&
+                              offer.status ===
+                                'kabul_edildi' && (
+                                <ActionButton
+                                  label="Tamamla"
+                                  disabled={
+                                    processingId === offer.id
+                                  }
+                                  className="bg-blue-600 text-white hover:bg-blue-700"
+                                  onClick={() =>
+                                    handleStatusChange(
+                                      offer.id,
+                                      'tamamlandi'
+                                    )
+                                  }
+                                />
+                              )}
+
+                            {!isBuyer && !isSeller && (
+                              <span className="text-xs text-slate-400">
+                                Yönetici görünümü
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       </div>
     </main>
+  )
+}
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  iconClass,
+}: {
+  title: string
+  value: string
+  icon: typeof ShoppingBag
+  iconClass: string
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div>
+        <p className="text-xs font-medium text-slate-500">
+          {title}
+        </p>
+
+        <h3 className="mt-1 text-2xl font-bold text-slate-900">
+          {value}
+        </h3>
+      </div>
+
+      <div className={`rounded-lg p-3 ${iconClass}`}>
+        <Icon className="h-6 w-6" />
+      </div>
+    </div>
+  )
+}
+
+function ActionButton({
+  label,
+  disabled,
+  className,
+  onClick,
+}: {
+  label: string
+  disabled: boolean
+  className: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+    >
+      {disabled ? 'İşleniyor...' : label}
+    </button>
   )
 }
