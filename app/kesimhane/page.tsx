@@ -88,28 +88,32 @@ export default function KesimhanePage() {
         .eq('status', 'Aktif')
         .order('name', { ascending: true })
   
-    if (houseError) {
-      console.error(
-        'Kesimhaneler yüklenemedi:',
-        houseError
-      )
-      setSlaughterhouses([])
-    } else {
-      setSlaughterhouses(houseData ?? [])
-  
-      if (houseData && houseData.length > 0) {
-        setSelectedHouse((currentHouse) =>
-          currentHouse &&
-          houseData.some(
-            (house) => house.id === currentHouse
-          )
-            ? currentHouse
-            : houseData[0].id
-        )
-      } else {
-        setSelectedHouse('')
-      }
-    }
+        if (houseError) {
+          const detailedError = [
+            `Mesaj: ${houseError.message || 'yok'}`,
+            `Kod: ${houseError.code || 'yok'}`,
+            `Detay: ${houseError.details || 'yok'}`,
+            `İpucu: ${houseError.hint || 'yok'}`,
+          ].join(' | ')
+        
+          console.error(`Kesimhaneler yüklenemedi — ${detailedError}`)
+        
+          setSlaughterhouses([])
+          setSelectedHouse('')
+        } else {
+          setSlaughterhouses(houseData ?? [])
+        
+          if (houseData && houseData.length > 0) {
+            setSelectedHouse((currentHouse) =>
+              currentHouse &&
+              houseData.some((house) => house.id === currentHouse)
+                ? currentHouse
+                : houseData[0].id
+            )
+          } else {
+            setSelectedHouse('')
+          }
+        }
   
     const { data: appData, error: appointmentError } =
       await supabase

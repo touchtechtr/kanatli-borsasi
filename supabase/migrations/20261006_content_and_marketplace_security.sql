@@ -199,3 +199,36 @@ with check (
 -- Mevcut herkese açık SELECT politikası korunmaktadır.
 
 commit;
+drop policy if exists slaughterhouses_select_active_or_owner
+on public.slaughterhouses;
+
+drop policy if exists slaughterhouses_select_active
+on public.slaughterhouses;
+
+drop policy if exists slaughterhouses_select_owner_or_admin
+on public.slaughterhouses;
+
+create policy slaughterhouses_select_active
+on public.slaughterhouses
+for select
+to anon, authenticated
+using (status = 'Aktif');
+
+create policy slaughterhouses_select_owner_or_admin
+on public.slaughterhouses
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.companies c
+    where c.id = slaughterhouses.company_id
+      and c.user_id = auth.uid()
+  )
+  or exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.is_admin = true
+  )
+);
