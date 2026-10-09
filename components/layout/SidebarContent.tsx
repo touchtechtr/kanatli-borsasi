@@ -85,6 +85,7 @@ export const NAV_GROUPS: NavGroup[] = [
 const ADMIN_ITEMS: NavItem[] = [
   { href: '/admin', label: 'Genel Bakış', icon: LayoutDashboard },
   { href: '/admin/firmalar', label: 'Firmalar', icon: Building2 },
+  { href: '/admin/ilanlar', label: 'İlanlar', icon: Megaphone },
   { href: '/admin/teklifler', label: 'Teklifler', icon: Megaphone },
 ]
 
