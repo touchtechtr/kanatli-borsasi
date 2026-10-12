@@ -17,6 +17,9 @@ type ListingRow = {
   unit: string;
   price: number;
   status: string;
+  moderation_status: string;
+  risk_score: number;
+  risk_flags: string[];
   created_at: string;
 };
 
@@ -37,6 +40,7 @@ export default function AdminListingsPage() {
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | ListingType>("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [moderationFilter, setModerationFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -48,17 +52,17 @@ export default function AdminListingsPage() {
       supabase
         .from("listings")
         .select(
-          "id, company_id, title, city, quantity, unit, price, status, created_at",
+          "id, company_id, title, city, quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
         ),
       supabase
         .from("feed_listings")
         .select(
-          "id, company_id, title, city, quantity, unit, price, status, created_at",
+          "id, company_id, title, city, quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
         ),
       supabase
         .from("livestock_listings")
         .select(
-          "id, company_id, title, city, quantity, unit, price, status, created_at",
+          "id, company_id, title, city, quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
         ),
     ]);
 
@@ -109,6 +113,9 @@ export default function AdminListingsPage() {
           price: Number(item.price),
           unit: item.unit ?? "—",
           status: item.status ?? "—",
+          moderation_status: item.moderation_status ?? "otomatik_onaylandi",
+          risk_score: Number(item.risk_score ?? 0),
+          risk_flags: Array.isArray(item.risk_flags) ? item.risk_flags : [],
         }))
         .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
     );
@@ -131,11 +138,13 @@ export default function AdminListingsPage() {
               .includes(search)) &&
           (typeFilter === "all" || row.type === typeFilter) &&
           (statusFilter === "all" || row.status === statusFilter) &&
+          (moderationFilter === "all" ||
+            row.moderation_status === moderationFilter) &&
           (!dateFrom || date >= dateFrom) &&
           (!dateTo || date <= dateTo)
         );
       }),
-    [rows, query, typeFilter, statusFilter, dateFrom, dateTo],
+    [rows, query, typeFilter, statusFilter, moderationFilter, dateFrom, dateTo],
   );
 
   const exportCsv = () => {
@@ -148,6 +157,9 @@ export default function AdminListingsPage() {
       "Birim",
       "Fiyat",
       "Durum",
+      "Moderasyon",
+      "Risk puanı",
+      "Risk nedenleri",
       "Tarih",
     ];
     const data = filtered.map((row) => [
@@ -159,6 +171,9 @@ export default function AdminListingsPage() {
       row.unit,
       row.price,
       row.status,
+      row.moderation_status,
+      row.risk_score,
+      row.risk_flags.join(", "),
       new Date(row.created_at).toLocaleString("tr-TR"),
     ]);
     const blob = new Blob(
@@ -206,7 +221,7 @@ export default function AdminListingsPage() {
           </div>
         </header>
 
-        <section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-5">
+        <section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-6">
           <label className="relative md:col-span-2">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input
@@ -240,11 +255,23 @@ export default function AdminListingsPage() {
               <option key={status}>{status}</option>
             ))}
           </select>
+          <select
+            value={moderationFilter}
+            onChange={(e) => setModerationFilter(e.target.value)}
+            className="rounded-xl border px-3 text-sm"
+          >
+            <option value="all">Tüm incelemeler</option>
+            <option value="inceleme_bekliyor">İnceleme bekleyen</option>
+            <option value="otomatik_onaylandi">Otomatik onaylanan</option>
+            <option value="onaylandi">Admin onaylı</option>
+            <option value="reddedildi">Admin reddetti</option>
+          </select>
           <button
             onClick={() => {
               setQuery("");
               setTypeFilter("all");
               setStatusFilter("all");
+              setModerationFilter("all");
               setDateFrom("");
               setDateTo("");
             }}
@@ -293,9 +320,20 @@ export default function AdminListingsPage() {
                       <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold">
                         {TYPE_LABELS[row.type]}
                       </span>
-                      <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
+                      <span
+                        className={`rounded-full px-2 py-1 text-[11px] font-bold ${
+                          row.moderation_status === "inceleme_bekliyor"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-50 text-emerald-700"
+                        }`}
+                      >
                         {row.status}
                       </span>
+                      {row.risk_score > 0 && (
+                        <span className="rounded-full bg-red-50 px-2 py-1 text-[11px] font-bold text-red-700">
+                          Risk {row.risk_score}
+                        </span>
+                      )}
                     </div>
                     <h2 className="mt-2 truncate font-bold text-slate-950">
                       {row.title}

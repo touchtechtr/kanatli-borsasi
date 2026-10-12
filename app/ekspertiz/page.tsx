@@ -12,6 +12,9 @@ interface ExpertRequest {
   city: string
   status: string
   created_at: string
+  admin_note: string | null
+  assigned_expert_company_id: string | null
+  expert_name: string | null
   companies: {
     name: string
     role: string
@@ -77,7 +80,7 @@ export default function ExpertizPage() {
     const { data, error } = await supabase
       .from('expert_requests')
       .select(
-        'id, company_id, service_type, title, description, city, status, created_at'
+        'id, company_id, service_type, title, description, city, status, created_at, admin_note, assigned_expert_company_id'
       )
       .order('created_at', { ascending: false })
   
@@ -90,7 +93,7 @@ export default function ExpertizPage() {
     const companyIds = [
       ...new Set(
         (data ?? [])
-          .map((item) => item.company_id)
+          .flatMap((item) => [item.company_id, item.assigned_expert_company_id])
           .filter(Boolean)
       ),
     ]
@@ -124,6 +127,9 @@ export default function ExpertizPage() {
       ...request,
       companies:
         companyMap.get(request.company_id) ?? null,
+      expert_name: request.assigned_expert_company_id
+        ? companyMap.get(request.assigned_expert_company_id)?.name ?? 'Bilinmeyen uzman'
+        : null,
     }))
   
     setRequests(safeRequests)
@@ -184,6 +190,20 @@ export default function ExpertizPage() {
     if (Array.isArray(comp)) return comp[0]?.name || 'Bilinmeyen Kurum';
     return comp.name;
   };
+
+  const getStatusLabel = (status: string) => ({
+    beklemede: '⏳ Yönetim Onayı Bekliyor',
+    onaylandi: '✅ Onaylandı',
+    uzman_atandi: '👤 Uzman Atandı',
+    reddedildi: '❌ Reddedildi',
+  }[status] ?? status)
+
+  const getStatusClass = (status: string) => {
+    if (status === 'reddedildi') return 'bg-red-50 text-red-700 border-red-100'
+    if (status === 'uzman_atandi') return 'bg-blue-50 text-blue-700 border-blue-100'
+    if (status === 'onaylandi') return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    return 'bg-amber-50 text-amber-700 border-amber-100'
+  }
 
   if (!mounted) return null;
 
@@ -306,12 +326,20 @@ export default function ExpertizPage() {
                     </div>
                     <h3 className="font-bold text-slate-900 text-base">{item.title}</h3>
                     <p className="text-sm text-slate-600 max-w-3xl">{item.description}</p>
+                    {item.expert_name && (
+                      <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                        Atanan uzman: {item.expert_name}
+                      </p>
+                    )}
+                    {item.admin_note && (
+                      <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                        Yönetim notu: {item.admin_note}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right whitespace-nowrap flex md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      item.status === 'beklemede' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                    }`}>
-                      {item.status === 'beklemede' ? '⏳ Uzman Bekliyor' : '✅ İnceleniyor'}
+                    <span className={`px-3 py-1 rounded-full border text-xs font-semibold ${getStatusClass(item.status)}`}>
+                      {getStatusLabel(item.status)}
                     </span>
                     <span className="text-[11px] text-slate-400">
                       {new Date(item.created_at).toLocaleDateString('tr-TR')}

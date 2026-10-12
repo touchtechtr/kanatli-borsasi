@@ -5,9 +5,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BookOpenText,
+  BadgeCheck,
   Building2,
+  CalendarCheck2,
   ChevronDown,
   ClipboardCheck,
+  Crown,
   Factory,
   Feather,
   FileSignature,
@@ -15,11 +18,14 @@ import {
   Landmark,
   LayoutDashboard,
   Megaphone,
+  Microscope,
+  PackageSearch,
   ShieldCheck,
   TrendingUp,
+  Users,
   UserCircle,
-  Wallet,
   Wheat,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ROLE_LABELS } from '@/constants/company'
@@ -49,7 +55,6 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Genel Bakış',
     items: [
       { href: '/', label: 'Anasayfa', icon: LayoutDashboard },
-      { href: '/borsa', label: 'Canlı Borsa', icon: TrendingUp },
     ],
   },
   {
@@ -57,11 +62,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/ciftci-paneli', label: 'Çiftçi Paneli', icon: Wheat },
       { href: '/tuccar-paneli', label: 'Tüccar Paneli', icon: Handshake },
-      {
-        href: '/sozlesme-yonetimi',
-        label: 'Sözleşmeli Üretim',
-        icon: FileSignature,
-      },
+      { href: '/borsa', label: 'Piyasa Fiyatları', icon: TrendingUp },
+      { href: '/sozlesme-yonetimi', label: 'Sözleşmeli Üretim', icon: FileSignature }, 
       { href: '/kesimhane', label: 'Kesimhane', icon: Factory },
     ],
   },
@@ -76,8 +78,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Hesabım',
     items: [
-      { href: '/cuzdan', label: 'Finans / Cüzdan', icon: Wallet },
-      { href: '/profil', label: 'Profil', icon: UserCircle },
+      { href: '/profil/ilanlarim', label: 'İlanlarım', icon: PackageSearch },
+      { href: '/profil', label: 'Hesap Merkezi', icon: UserCircle },
     ],
   },
 ]
@@ -86,7 +88,15 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: '/admin', label: 'Genel Bakış', icon: LayoutDashboard },
   { href: '/admin/firmalar', label: 'Firmalar', icon: Building2 },
   { href: '/admin/ilanlar', label: 'İlanlar', icon: Megaphone },
+  { href: '/admin/faaliyetler', label: 'Faaliyetler', icon: BadgeCheck, },
+  { href: '/admin/ilan-promosyonlari', label: 'Öne Çıkarma', icon: Crown },
+  { href: '/admin/ilan-kurallari', label: 'İlan Kuralları', icon: SlidersHorizontal },
   { href: '/admin/teklifler', label: 'Teklifler', icon: Megaphone },
+  { href: '/admin/randevular', label: 'Randevular', icon: CalendarCheck2 },
+  { href: '/admin/ekspertiz', label: 'Ekspertiz Talepleri', icon: Microscope },
+  { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: Users },
+  { href: '/admin/sozlesmeler', label: 'Sözleşmeler', icon: FileSignature },
+  { href: '/admin/kesimhaneler', label: 'Kesimhaneler', icon: Factory },
 ]
 
 const GUEST_ACCOUNT: SidebarAccount = {
@@ -175,6 +185,7 @@ export default function SidebarContent({
             : 'Kullanıcı Hesabı',
         initials,
       })
+
     }
 
     void loadAccount()
@@ -212,7 +223,10 @@ export default function SidebarContent({
 
             <div className="space-y-1">
               {group.items.map(({ href, label, icon: Icon }) => {
-                const isActive = pathname === href
+                const isActive =
+                  href === '/'
+                    ? pathname === '/'
+                    : pathname === href || pathname.startsWith(`${href}/`)
 
                 return (
                   <Link

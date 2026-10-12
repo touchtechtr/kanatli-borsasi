@@ -20,6 +20,8 @@ interface Appointment {
   appointment_date: string
   status: string
   notes: string
+  admin_note: string | null
+  reviewed_at: string | null
   slaughterhouses: {
     name: string
     city: string
@@ -119,7 +121,7 @@ export default function KesimhanePage() {
       await supabase
         .from('slaughter_appointments')
         .select(
-          'id, company_id, flock_size, appointment_date, status, notes, slaughterhouses ( name, city )'
+          'id, company_id, flock_size, appointment_date, status, notes, admin_note, reviewed_at, slaughterhouses ( name, city )'
         )
         .order('appointment_date', { ascending: true })
   
@@ -253,6 +255,16 @@ export default function KesimhanePage() {
     return comp.name;
   };
 
+  const getAppointmentStatusClass = (status: string) => {
+    if (status === 'Onaylandı') {
+      return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    }
+    if (status === 'Reddedildi') {
+      return 'bg-red-50 text-red-700 border-red-100'
+    }
+    return 'bg-amber-50 text-amber-700 border-amber-100'
+  }
+
   const currentCompany = companies.find(
     (company) => company.id === userCompanyId
   )
@@ -279,6 +291,15 @@ export default function KesimhanePage() {
           </div>
           
           <div className="flex items-center gap-3">
+          {user && (
+            <button
+              type="button"
+              onClick={() => router.push('/kesimhane/tesis-basvurusu')}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Tesis Başvurusu
+            </button>
+          )}
           {user ? (
   canCreateAppointment ? (
     <button
@@ -417,9 +438,14 @@ export default function KesimhanePage() {
                     </div>
                     <h3 className="font-bold text-slate-900 text-sm">Kesim Miktarı: <span className="text-emerald-600">{item.flock_size.toLocaleString()} Adet Piliç</span></h3>
                     {item.notes && <p className="text-xs text-slate-500">Not: {item.notes}</p>}
+                    {item.admin_note && (
+                      <p className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-800">
+                        Yönetim notu: {item.admin_note}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right whitespace-nowrap flex md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-2">
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getAppointmentStatusClass(item.status)}`}>
                       📅 {item.appointment_date} ({item.status})
                     </span>
                   </div>

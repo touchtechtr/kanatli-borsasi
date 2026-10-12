@@ -290,7 +290,16 @@ export default function TuccarPanelPage() {
 
 
 
-      if (companyData.role !== 'tuccar') {
+      const { data: hasBuyerActivity, error: activityError } = await supabase.rpc(
+        'company_has_any_active_activity',
+        { p_company_id: companyData.id, p_activity_codes: ['animal_buyer', 'feed_buyer'] }
+      )
+
+      if (activityError) {
+        console.error('Faaliyet yetkisi kontrol edilemedi:', activityError.message)
+      }
+
+      if (!hasBuyerActivity) {
 
         setAccessState('wrong-role')
 
@@ -552,11 +561,11 @@ export default function TuccarPanelPage() {
 
       'wrong-role': {
 
-        title: 'Bu Panel Tüccar Hesaplarına Özeldir',
+        title: 'Onaylı Alıcı Faaliyeti Gerekiyor',
 
         description:
 
-          'Mevcut firma rolünüz tüccar panelini kullanmaya uygun değil.',
+          'Bu alanı kullanmak için Canlı Hayvan Alıcısı veya Yem Alıcısı faaliyetlerinden en az birinin onaylanması gerekir.',
 
         icon: LockKeyhole,
 

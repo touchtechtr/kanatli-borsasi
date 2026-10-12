@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { INITIAL_ACTIVITY_OPTIONS } from '@/constants/company'
 
 export default function AuthPage() {
   const [email, setEmail] = useState('')
@@ -11,6 +12,11 @@ export default function AuthPage() {
   const [companyName, setCompanyName] = useState('')
   const [taxNo, setTaxNo] = useState('')
   const [role, setRole] = useState('ciftci')
+  const [requestedActivities, setRequestedActivities] = useState<string[]>([
+    'animal_breeder',
+    'animal_seller',
+    'feed_buyer',
+  ])
   
   const [isLogin, setIsLogin] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -72,7 +78,11 @@ export default function AuthPage() {
       )
       return
     } else {
-      
+      if (requestedActivities.length === 0) {
+        setError('En az bir faaliyet alanı seçmelisiniz.')
+        setLoading(false)
+        return
+      }
 
       const { error: signUpError } = await supabase.auth.signUp({
         email,
@@ -83,6 +93,7 @@ export default function AuthPage() {
             company_name: companyName,
             role: role,
             tax_no: taxNo,
+            requested_activities: requestedActivities,
           },
         },
       })
@@ -133,6 +144,35 @@ export default function AuthPage() {
                 />
               </div>
 
+              <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <legend className="px-1 text-xs font-semibold uppercase text-slate-600">
+                  Faaliyet Alanları
+                </legend>
+                <p className="mb-3 text-xs leading-5 text-slate-500">
+                  Birden fazla alan seçebilirsiniz. Firma onayından sonra her faaliyet için gerekli belgeleri profilinizden yükleyebilirsiniz.
+                </p>
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {INITIAL_ACTIVITY_OPTIONS.map((activity) => {
+                    const checked = requestedActivities.includes(activity.code)
+                    return (
+                      <label key={activity.code} className="flex cursor-pointer gap-3 rounded-lg border border-slate-200 bg-white p-3 hover:border-emerald-300">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => setRequestedActivities((current) => checked ? current.filter((code) => code !== activity.code) : [...current, activity.code])}
+                          className="mt-1 h-4 w-4 accent-emerald-600"
+                        />
+                        <span>
+                          <span className="block text-sm font-semibold text-slate-800">{activity.name}</span>
+                          <span className="block text-xs text-slate-500">{activity.segment} · {activity.description}</span>
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+                {requestedActivities.length === 0 && <p className="mt-2 text-xs font-medium text-red-600">En az bir faaliyet alanı seçin.</p>}
+              </fieldset>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Firma / Çiftlik Adı</label>
                 <input
@@ -158,7 +198,7 @@ export default function AuthPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Rol Seçimi</label>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Ana Firma Profili</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
@@ -167,6 +207,8 @@ export default function AuthPage() {
                   <option value="ciftci">Çiftçi / Üretici</option>
                   <option value="tuccar">Tüccar / Alıcı</option>
                   <option value="entegre">Entegre Tesis</option>
+                  <option value="tedarikci">Yem / Hammadde Tedarikçisi</option>
+                  <option value="uzman">Ekspertiz / Veteriner</option>
                 </select>
               </div>
             </>

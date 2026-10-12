@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Printer, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 
 const TABLES = {
   listings: { label: "Genel ilan" },
@@ -17,6 +18,10 @@ type Data = Record<string, unknown> & {
   company_id: string | null;
   title: string;
   status: string;
+  moderation_status: string;
+  moderation_reason: string | null;
+  risk_score: number;
+  risk_flags: string[];
   created_at: string;
 };
 
@@ -43,6 +48,14 @@ const LABELS: Record<string, string> = {
   age_group: "Yaş grubu",
   average_weight: "Ortalama ağırlık",
   health_status: "Sağlık durumu",
+};
+
+const RISK_LABELS: Record<string, string> = {
+  manual_review_all: "Tüm ilanlar için manuel inceleme açık",
+  duplicate_recent_listing: "Yakın zamanda aynı başlıkla ilan verilmiş",
+  price_above_limit: "Birim fiyat yönetim sınırını aşıyor",
+  quantity_above_limit: "Miktar yönetim sınırını aşıyor",
+  new_company: "Yeni firma hesabı",
 };
 
 export default function AdminListingDetailPage() {
@@ -104,6 +117,41 @@ export default function AdminListingDetailPage() {
       .update({ status })
       .eq("id", listing.id);
     if (updateError) setError(`Durum değiştirilemedi: ${updateError.message}`);
+    else {
+      await dispatchNotificationEmails(supabase);
+      await load();
+    }
+    setProcessing(false);
+  };
+
+  const reviewListing = async (decision: "onaylandi" | "reddedildi") => {
+    if (!listing) return;
+    const reason =
+      decision === "reddedildi"
+        ? window.prompt(
+            "Ret nedenini yazın. Bu bilgi ilan kaydında saklanacaktır.",
+          )
+        : null;
+    if (decision === "reddedildi" && !reason?.trim()) return;
+    if (
+      !window.confirm(
+        decision === "onaylandi"
+          ? "İlan onaylanıp yayımlansın mı?"
+          : "İlan reddedilsin mi?",
+      )
+    )
+      return;
+
+    setProcessing(true);
+    setError(null);
+    const { error: reviewError } = await supabase.rpc("admin_review_listing", {
+      target_listing_type: type,
+      target_listing_id: listing.id,
+      decision,
+      review_reason: reason,
+    });
+    if (reviewError)
+      setError(`Moderasyon işlemi başarısız: ${reviewError.message}`);
     else await load();
     setProcessing(false);
   };
@@ -231,26 +279,91 @@ export default function AdminListingDetailPage() {
                   Yönetim işlemi
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
-                  İlanı yayından kaldırabilir veya yeniden
-                  etkinleştirebilirsiniz.
+                  {listing.moderation_status === "inceleme_bekliyor"
+                    ? "Risk nedenlerini inceleyip ilan hakkında karar verin."
+                    : "İlanı yayından kaldırabilir veya yeniden etkinleştirebilirsiniz."}
                 </p>
-                <div className="mt-4 flex gap-2">
-                  <button
-                    disabled={processing || listing.status === "pasif"}
-                    onClick={() => void changeStatus("pasif")}
-                    className="rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-40"
-                  >
-                    Yayından kaldır
-                  </button>
-                  <button
-                    disabled={processing || listing.status === "aktif"}
-                    onClick={() => void changeStatus("aktif")}
-                    className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
-                  >
-                    Etkinleştir
-                  </button>
-                </div>
+                {listing.moderation_status === "inceleme_bekliyor" ? (
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      disabled={processing}
+                      onClick={() => void reviewListing("reddedildi")}
+                      className="rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-40"
+                    >
+                      Gerekçeyle reddet
+                    </button>
+                    <button
+                      disabled={processing}
+                      onClick={() => void reviewListing("onaylandi")}
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                    >
+                      Onayla ve yayımla
+                    </button>
+                  </div>
+                ) : listing.moderation_status === "reddedildi" ? (
+                  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                    Reddedilen ilan doğrudan etkinleştirilemez. İlan sahibinin
+                    bilgileri düzelterek yeniden ilan oluşturması gerekir.
+                  </div>
+                ) : (
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      disabled={processing || listing.status === "pasif"}
+                      onClick={() => void changeStatus("pasif")}
+                      className="rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-40"
+                    >
+                      Yayından kaldır
+                    </button>
+                    <button
+                      disabled={processing || listing.status === "aktif"}
+                      onClick={() => void changeStatus("aktif")}
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+                    >
+                      Etkinleştir
+                    </button>
+                  </div>
+                )}
               </div>
+            </section>
+            <section className="rounded-2xl border bg-white p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-bold">Moderasyon özeti</h2>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    listing.moderation_status === "inceleme_bekliyor"
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-emerald-50 text-emerald-700"
+                  }`}
+                >
+                  {listing.moderation_status}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-slate-600">
+                Risk puanı: <b>{Number(listing.risk_score ?? 0)}</b>
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(listing.risk_flags ?? []).length ? (
+                  listing.risk_flags.map((flag) => (
+                    <span
+                      key={flag}
+                      className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
+                    >
+                      {flag.startsWith("blocked_word:")
+                        ? `Şüpheli kelime: ${flag.split(":").slice(1).join(":")}`
+                        : (RISK_LABELS[flag] ?? flag)}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-500">
+                    Risk kuralına takılmadı.
+                  </span>
+                )}
+              </div>
+              {listing.moderation_reason && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <b>Moderasyon nedeni:</b> {listing.moderation_reason}
+                </div>
+              )}
             </section>
             <section className="rounded-2xl border bg-white p-6">
               <h2 className="font-bold">İlan bilgileri</h2>
