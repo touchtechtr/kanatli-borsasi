@@ -155,18 +155,71 @@ export default function ListingPromotionsPage() {
     if (!confirmed) return
 
     setSubmitting(true)
-    const { error } = await supabase.rpc('request_listing_promotion', {
+
+    const requestPayload = {
       target_listing_type: selectedListing.type,
       target_listing_id: selectedListing.id,
       target_package_code: selectedPackage.code,
-    })
-
-    if (error) alert('Talep oluşturulamadı: ' + error.message)
-    else {
-      alert('Öne çıkarma talebiniz oluşturuldu. Ödeme doğrulaması ve yönetim onayından sonra etkinleşecektir.')
-      await loadData()
     }
-    setSubmitting(false)
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        alert('Oturumunuz sona ermiş. Lütfen yeniden giriş yapın.')
+        window.location.replace('/auth')
+        return
+      }
+
+      let result = await supabase.rpc(
+        'request_listing_promotion',
+        requestPayload
+      )
+
+      // Süresi yaklaşan erişim belirteçlerinde oturumu bir kez yenileyip
+      // isteği güvenli biçimde tekrarlarız.
+      if (
+        result.error &&
+        ['PGRST301', '401', 'JWT expired'].some((value) =>
+          `${result.error?.code || ''} ${result.error?.message || ''}`.includes(value)
+        )
+      ) {
+        const { error: refreshError } =
+          await supabase.auth.refreshSession()
+
+        if (!refreshError) {
+          result = await supabase.rpc(
+            'request_listing_promotion',
+            requestPayload
+          )
+        }
+      }
+
+      if (result.error) {
+        alert('Talep oluşturulamadı: ' + result.error.message)
+        return
+      }
+
+      alert(
+        'Öne çıkarma talebiniz oluşturuldu. Ödeme doğrulaması ve yönetim onayından sonra etkinleşecektir.'
+      )
+      await loadData()
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : 'Bilinmeyen bağlantı hatası'
+
+      console.error('Öne çıkarma talebi gönderilemedi:', requestError)
+      alert(
+        `Talep Supabase sunucusuna ulaştırılamadı: ${message}. İnternet bağlantınızı kontrol edip sayfayı yenileyerek tekrar deneyin.`
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (

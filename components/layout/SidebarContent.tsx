@@ -19,8 +19,10 @@ import {
   LayoutDashboard,
   Megaphone,
   Microscope,
+  MailWarning,
   PackageSearch,
   ShieldCheck,
+  ScrollText,
   TrendingUp,
   Users,
   UserCircle,
@@ -50,6 +52,9 @@ type SidebarAccount = {
   initials: string
 }
 
+type AdminBadge = { value: number; tone: 'red' | 'yellow' | 'green' | 'blue' }
+type AdminCounts = Record<string, AdminBadge[]>
+
 export const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Genel Bakış',
@@ -63,7 +68,11 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/ciftci-paneli', label: 'Çiftçi Paneli', icon: Wheat },
       { href: '/tuccar-paneli', label: 'Tüccar Paneli', icon: Handshake },
       { href: '/borsa', label: 'Piyasa Fiyatları', icon: TrendingUp },
-      { href: '/sozlesme-yonetimi', label: 'Sözleşmeli Üretim', icon: FileSignature }, 
+      {
+        href: '/sozlesme-yonetimi',
+        label: 'Sözleşmeli Üretim',
+        icon: FileSignature,
+      },
       { href: '/kesimhane', label: 'Kesimhane', icon: Factory },
     ],
   },
@@ -86,9 +95,10 @@ export const NAV_GROUPS: NavGroup[] = [
 
 const ADMIN_ITEMS: NavItem[] = [
   { href: '/admin', label: 'Genel Bakış', icon: LayoutDashboard },
+  { href: '/admin/hareket-kayitlari', label: 'Hareket Kayıtları', icon: ScrollText },
   { href: '/admin/firmalar', label: 'Firmalar', icon: Building2 },
+  { href: '/admin/faaliyetler', label: 'Faaliyetler', icon: BadgeCheck },
   { href: '/admin/ilanlar', label: 'İlanlar', icon: Megaphone },
-  { href: '/admin/faaliyetler', label: 'Faaliyetler', icon: BadgeCheck, },
   { href: '/admin/ilan-promosyonlari', label: 'Öne Çıkarma', icon: Crown },
   { href: '/admin/ilan-kurallari', label: 'İlan Kuralları', icon: SlidersHorizontal },
   { href: '/admin/teklifler', label: 'Teklifler', icon: Megaphone },
@@ -97,6 +107,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: Users },
   { href: '/admin/sozlesmeler', label: 'Sözleşmeler', icon: FileSignature },
   { href: '/admin/kesimhaneler', label: 'Kesimhaneler', icon: Factory },
+  { href: '/admin/eposta-kuyrugu', label: 'E-posta Kuyruğu', icon: MailWarning },
 ]
 
 const GUEST_ACCOUNT: SidebarAccount = {
@@ -119,12 +130,24 @@ export default function SidebarContent({
   const [managementOpen, setManagementOpen] = useState(
     pathname.startsWith('/admin')
   )
+  const [adminCounts, setAdminCounts] = useState<AdminCounts>({})
 
   useEffect(() => {
     if (pathname.startsWith('/admin')) {
       setManagementOpen(true)
     }
   }, [pathname])
+
+  useEffect(() => {
+    if (!account.isAdmin) return
+    let active = true
+    const refreshCounts = async () => {
+      const { data, error } = await supabase.rpc('admin_sidebar_counts')
+      if (active && !error && data) setAdminCounts(data as AdminCounts)
+    }
+    void refreshCounts()
+    return () => { active = false }
+  }, [pathname, account.isAdmin])
 
   useEffect(() => {
     let mounted = true
@@ -185,6 +208,17 @@ export default function SidebarContent({
             : 'Kullanıcı Hesabı',
         initials,
       })
+
+      if (isAdmin) {
+        const { data: countData, error: countError } = await supabase.rpc(
+          'admin_sidebar_counts'
+        )
+        if (!countError && mounted && countData) {
+          setAdminCounts(countData as AdminCounts)
+        }
+      } else {
+        setAdminCounts({})
+      }
 
     }
 
@@ -302,7 +336,21 @@ export default function SidebarContent({
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5" />
-                      {label}
+                      <span className="min-w-0 flex-1 truncate">{label}</span>
+                      {(adminCounts[href] ?? []).map((badge, index) => badge.value > 0 && (
+                        <span
+                          key={`${href}-${index}`}
+                          title={badge.tone === 'red' ? 'Sorunlu / reddedilen' : badge.tone === 'yellow' ? 'Bekleyen' : badge.tone === 'green' ? 'Aktif / tamamlanan' : 'Yeni / toplam'}
+                          className={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-extrabold ${
+                            badge.tone === 'red' ? 'bg-red-500 text-white' :
+                            badge.tone === 'yellow' ? 'bg-amber-400 text-slate-950' :
+                            badge.tone === 'green' ? 'bg-emerald-500 text-white' :
+                            'bg-blue-500 text-white'
+                          }`}
+                        >
+                          {badge.value > 99 ? '99+' : badge.value}
+                        </span>
+                      ))}
                     </Link>
                   )
                 })}

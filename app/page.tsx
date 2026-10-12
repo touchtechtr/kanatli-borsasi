@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 
 type ListingSource = "listings" | "feed_listings" | "livestock_listings";
 type OfferKind = "listing" | "feed" | "livestock";
@@ -580,6 +581,7 @@ function HomeContent() {
 
     if (error) alert("İlan oluşturulamadı: " + error.message);
     else {
+      await dispatchNotificationEmails(supabase);
       setShowGeneralForm(false);
       setNewListing({
         title: "",

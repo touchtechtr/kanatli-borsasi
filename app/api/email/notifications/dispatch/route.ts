@@ -63,19 +63,25 @@ export async function POST(request: Request) {
     .select("is_admin")
     .eq("id", userData.user.id)
     .maybeSingle();
-  if (!profile?.is_admin)
-    return Response.json(
-      { error: "Yönetici yetkisi gerekiyor." },
-      { status: 403 },
-    );
 
-  const { data: rows, error: loadError } = await supabase
+  let queueQuery = supabase
     .from("notification_email_outbox")
-    .select("id,recipient_email,subject,title,message,link,attempt_count")
+    .select(
+      "id,recipient_user_id,recipient_email,subject,title,message,link,attempt_count",
+    )
     .in("status", ["beklemede", "hata"])
     .lt("attempt_count", 4)
     .order("created_at", { ascending: true })
     .limit(25);
+
+  // Yöneticiler genel kuyruğu, diğer kullanıcılar yalnızca kendi e-postalarını
+  // çalıştırabilir. E-posta içeriği veritabanı tarafından üretildiği için
+  // istemci gönderilecek metni veya alıcıyı belirleyemez.
+  if (!profile?.is_admin) {
+    queueQuery = queueQuery.eq("recipient_user_id", userData.user.id);
+  }
+
+  const { data: rows, error: loadError } = await queueQuery;
   if (loadError)
     return Response.json({ error: loadError.message }, { status: 500 });
 

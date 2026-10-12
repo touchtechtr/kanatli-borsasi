@@ -12,6 +12,7 @@ import {
   Truck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 
 type FormData = {
   title: string;
@@ -241,6 +242,7 @@ export default function NewLivestockPage() {
       return;
     }
 
+    await dispatchNotificationEmails(supabase);
     alert(
       "İlanınız kaydedildi. Moderasyon sonucuna göre yayınlanacak veya yönetici incelemesine alınacaktır.",
     );
