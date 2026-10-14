@@ -8,6 +8,7 @@ import {
   BadgeCheck,
   Building2,
   CalendarCheck2,
+  CircleDollarSign,
   ChevronDown,
   ClipboardCheck,
   Crown,
@@ -17,6 +18,7 @@ import {
   Handshake,
   Landmark,
   LayoutDashboard,
+  LogOut,
   Megaphone,
   Microscope,
   MailWarning,
@@ -25,6 +27,7 @@ import {
   ScrollText,
   TrendingUp,
   Users,
+  UserCog,
   UserCircle,
   Wheat,
   SlidersHorizontal,
@@ -44,12 +47,15 @@ type NavGroup = {
   items: NavItem[]
 }
 
+type AdminNavItem = NavItem & { roles: string[] }
+
 type SidebarAccount = {
   authenticated: boolean
   isAdmin: boolean
   name: string
   label: string
   initials: string
+  adminRole: string | null
 }
 
 type AdminBadge = { value: number; tone: 'red' | 'yellow' | 'green' | 'blue' }
@@ -93,21 +99,31 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ]
 
-const ADMIN_ITEMS: NavItem[] = [
-  { href: '/admin', label: 'Genel Bakış', icon: LayoutDashboard },
-  { href: '/admin/hareket-kayitlari', label: 'Hareket Kayıtları', icon: ScrollText },
-  { href: '/admin/firmalar', label: 'Firmalar', icon: Building2 },
-  { href: '/admin/faaliyetler', label: 'Faaliyetler', icon: BadgeCheck },
-  { href: '/admin/ilanlar', label: 'İlanlar', icon: Megaphone },
-  { href: '/admin/ilan-promosyonlari', label: 'Öne Çıkarma', icon: Crown },
-  { href: '/admin/ilan-kurallari', label: 'İlan Kuralları', icon: SlidersHorizontal },
-  { href: '/admin/teklifler', label: 'Teklifler', icon: Megaphone },
-  { href: '/admin/randevular', label: 'Randevular', icon: CalendarCheck2 },
-  { href: '/admin/ekspertiz', label: 'Ekspertiz Talepleri', icon: Microscope },
-  { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: Users },
-  { href: '/admin/sozlesmeler', label: 'Sözleşmeler', icon: FileSignature },
-  { href: '/admin/kesimhaneler', label: 'Kesimhaneler', icon: Factory },
-  { href: '/admin/eposta-kuyrugu', label: 'E-posta Kuyruğu', icon: MailWarning },
+const ALL_STAFF = ['super_admin','moderator','finance','operations','auditor']
+const ADMIN_ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Süper Yönetici',
+  moderator: 'Moderatör',
+  finance: 'Finans Yöneticisi',
+  operations: 'Operasyon Yöneticisi',
+  auditor: 'Salt Okunur Denetçi',
+}
+const ADMIN_ITEMS: AdminNavItem[] = [
+  { href: '/admin', label: 'Genel Bakış', icon: LayoutDashboard, roles: ALL_STAFF },
+  { href: '/admin/hareket-kayitlari', label: 'Hareket Kayıtları', icon: ScrollText, roles: ALL_STAFF },
+  { href: '/admin/firmalar', label: 'Firmalar', icon: Building2, roles: ['super_admin','moderator'] },
+  { href: '/admin/faaliyetler', label: 'Faaliyetler', icon: BadgeCheck, roles: ['super_admin','moderator'] },
+  { href: '/admin/ilanlar', label: 'İlanlar', icon: Megaphone, roles: ['super_admin','moderator'] },
+  { href: '/admin/ilan-promosyonlari', label: 'Öne Çıkarma', icon: Crown, roles: ['super_admin','moderator','finance'] },
+  { href: '/admin/ilan-kurallari', label: 'İlan Kuralları', icon: SlidersHorizontal, roles: ['super_admin','moderator'] },
+  { href: '/admin/teklifler', label: 'Teklifler', icon: Megaphone, roles: ['super_admin','moderator','finance'] },
+  { href: '/admin/finans', label: 'Finans ve Ödemeler', icon: CircleDollarSign, roles: ['super_admin','finance'] },
+  { href: '/admin/randevular', label: 'Randevular', icon: CalendarCheck2, roles: ['super_admin','operations'] },
+  { href: '/admin/ekspertiz', label: 'Ekspertiz Talepleri', icon: Microscope, roles: ['super_admin','operations'] },
+  { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: Users, roles: ['super_admin','moderator'] },
+  { href: '/admin/personel', label: 'Yönetim Personeli', icon: UserCog, roles: ['super_admin'] },
+  { href: '/admin/sozlesmeler', label: 'Sözleşmeler', icon: FileSignature, roles: ['super_admin','operations'] },
+  { href: '/admin/kesimhaneler', label: 'Kesimhaneler', icon: Factory, roles: ['super_admin','operations'] },
+  { href: '/admin/eposta-kuyrugu', label: 'E-posta Kuyruğu', icon: MailWarning, roles: ['super_admin','operations'] },
 ]
 
 const GUEST_ACCOUNT: SidebarAccount = {
@@ -116,6 +132,7 @@ const GUEST_ACCOUNT: SidebarAccount = {
   name: 'Misafir',
   label: 'Giriş yapılmadı',
   initials: 'M',
+  adminRole: null,
 }
 
 export default function SidebarContent({
@@ -131,6 +148,15 @@ export default function SidebarContent({
     pathname.startsWith('/admin')
   )
   const [adminCounts, setAdminCounts] = useState<AdminCounts>({})
+  const [signingOut, setSigningOut] = useState(false)
+
+  const handleSignOut = async () => {
+    if (signingOut) return
+    setSigningOut(true)
+    await supabase.auth.signOut()
+    onNavigate?.()
+    window.location.replace('/auth')
+  }
 
   useEffect(() => {
     if (pathname.startsWith('/admin')) {
@@ -142,8 +168,19 @@ export default function SidebarContent({
     if (!account.isAdmin) return
     let active = true
     const refreshCounts = async () => {
-      const { data, error } = await supabase.rpc('admin_sidebar_counts')
-      if (active && !error && data) setAdminCounts(data as AdminCounts)
+      const [{ data, error }, { data: paymentRows }] = await Promise.all([
+        supabase.rpc('admin_sidebar_counts'),
+        supabase.from('trade_payments').select('status'),
+      ])
+      if (active && !error && data) {
+        const next = data as AdminCounts
+        if (paymentRows) next['/admin/finans'] = [
+          { value: paymentRows.filter((row) => ['iade_edildi', 'iptal'].includes(row.status)).length, tone: 'red' },
+          { value: paymentRows.filter((row) => row.status === 'odeme_bekliyor').length, tone: 'yellow' },
+          { value: paymentRows.filter((row) => ['odendi_havuzda', 'saticiya_aktarildi'].includes(row.status)).length, tone: 'green' },
+        ]
+        setAdminCounts({ ...next })
+      }
     }
     void refreshCounts()
     return () => { active = false }
@@ -164,7 +201,7 @@ export default function SidebarContent({
         return
       }
 
-      const [{ data: profile }, { data: company }] = await Promise.all([
+      const [{ data: profile }, { data: company }, { data: platformAccess }] = await Promise.all([
         supabase
           .from('profiles')
           .select('full_name, is_admin')
@@ -175,6 +212,7 @@ export default function SidebarContent({
           .select('role')
           .eq('user_id', user.id)
           .maybeSingle(),
+        supabase.rpc('get_my_platform_access'),
       ])
 
       if (!mounted) return
@@ -195,26 +233,34 @@ export default function SidebarContent({
           .toLocaleUpperCase('tr-TR') || 'K'
 
       const role = company?.role as CompanyRole | undefined
-      const isAdmin = Boolean(profile?.is_admin)
+      const isAdmin = Boolean(platformAccess?.is_staff && platformAccess?.active)
 
       setAccount({
         authenticated: true,
         isAdmin,
         name: fullName,
         label: isAdmin
-          ? 'Yönetici Hesabı'
+          ? ADMIN_ROLE_LABELS[platformAccess?.role] || 'Yönetici Hesabı'
           : role
             ? `${ROLE_LABELS[role] || role} Hesabı`
             : 'Kullanıcı Hesabı',
         initials,
+        adminRole: platformAccess?.role ?? null,
       })
 
       if (isAdmin) {
-        const { data: countData, error: countError } = await supabase.rpc(
-          'admin_sidebar_counts'
-        )
+        const [{ data: countData, error: countError }, { data: paymentRows }] = await Promise.all([
+          supabase.rpc('admin_sidebar_counts'),
+          supabase.from('trade_payments').select('status'),
+        ])
         if (!countError && mounted && countData) {
-          setAdminCounts(countData as AdminCounts)
+          const next = countData as AdminCounts
+          if (paymentRows) next['/admin/finans'] = [
+            { value: paymentRows.filter((row) => ['iade_edildi', 'iptal'].includes(row.status)).length, tone: 'red' },
+            { value: paymentRows.filter((row) => row.status === 'odeme_bekliyor').length, tone: 'yellow' },
+            { value: paymentRows.filter((row) => ['odendi_havuzda', 'saticiya_aktarildi'].includes(row.status)).length, tone: 'green' },
+          ]
+          setAdminCounts({ ...next })
         }
       } else {
         setAdminCounts({})
@@ -249,7 +295,7 @@ export default function SidebarContent({
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
-        {NAV_GROUPS.map((group) => (
+        {!account.isAdmin && NAV_GROUPS.map((group) => (
           <div key={group.title}>
             <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
               {group.title}
@@ -318,7 +364,7 @@ export default function SidebarContent({
 
             {managementOpen && (
               <div className="ml-5 mt-1 space-y-1 border-l border-navy-700 pl-3">
-                {ADMIN_ITEMS.map(({ href, label, icon: Icon }) => {
+                {ADMIN_ITEMS.filter((item) => account.adminRole && item.roles.includes(account.adminRole)).map(({ href, label, icon: Icon }) => {
                   const isActive =
                     href === '/admin'
                       ? pathname === '/admin'
@@ -360,9 +406,9 @@ export default function SidebarContent({
         )}
       </nav>
 
-      <div className="flex-shrink-0 border-t border-navy-800 p-4">
+      <div className="flex-shrink-0 space-y-2 border-t border-navy-800 p-4">
         <Link
-          href={account.authenticated ? '/profil' : '/auth'}
+          href={account.authenticated ? (account.isAdmin ? '/admin' : '/profil') : '/auth'}
           onClick={onNavigate}
           className="flex items-center gap-3 rounded-lg bg-navy-900 px-3 py-2.5 transition-colors hover:bg-navy-800"
         >
@@ -378,6 +424,17 @@ export default function SidebarContent({
             </p>
           </div>
         </Link>
+        {account.authenticated && (
+          <button
+            type="button"
+            onClick={() => void handleSignOut()}
+            disabled={signingOut}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+          >
+            <LogOut className="h-[18px] w-[18px]" />
+            {signingOut ? 'Çıkış yapılıyor…' : 'Çıkış Yap'}
+          </button>
+        )}
       </div>
     </>
   )

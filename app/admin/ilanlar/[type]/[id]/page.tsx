@@ -67,6 +67,7 @@ export default function AdminListingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!(type in TABLES)) {
@@ -88,6 +89,8 @@ export default function AdminListingDetailPage() {
     }
     const loaded = data as Data;
     setListing(loaded);
+    const { data: imageRows } = await supabase.from('listing_images').select('public_url').eq('listing_type',type).eq('listing_id',params.id).order('position');
+    setImages((imageRows ?? []).map((image) => image.public_url));
     if (loaded.company_id) {
       const result = await supabase
         .from("companies")
@@ -253,6 +256,7 @@ export default function AdminListingDetailPage() {
                 </div>
               </div>
             </section>
+            {images.length > 0 && <section className="rounded-2xl border bg-white p-5"><h2 className="font-bold">İlan görselleri</h2><div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((url,index)=><img key={url} src={url} alt={`${listing.title} görsel ${index+1}`} className={`w-full rounded-xl object-cover ${index===0?'col-span-2 row-span-2 aspect-[4/3]':'aspect-[4/3]'}`}/>)}</div></section>}
             <section className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border bg-white p-5">
                 <p className="text-xs font-bold uppercase text-slate-400">

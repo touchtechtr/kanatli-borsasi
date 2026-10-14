@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowDownLeft, ArrowUpRight, RefreshCw, ShieldCheck, Wallet } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, RefreshCw, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type WalletTransaction = {
@@ -25,6 +25,10 @@ type WalletData = {
   balance: number
   total_income: number
   total_expense: number
+  pending_income: number
+  pending_expense: number
+  can_view_platform: boolean
+  has_company: boolean
   transactions: WalletTransaction[]
 }
 
@@ -60,7 +64,16 @@ export default function WalletPage() {
       return
     }
 
-    const { data, error: walletError } = await supabase.rpc('get_my_wallet')
+    const { data: platformAccess } = await supabase.rpc('get_my_platform_access')
+    if (platformAccess?.is_staff) {
+      window.location.replace('/admin/finans')
+      return
+    }
+
+    const { data, error: walletError } = await supabase.rpc(
+      'get_wallet_dashboard',
+      { p_scope: 'company' }
+    )
     if (walletError) {
       setError('Cüzdan yüklenemedi: ' + walletError.message)
       setWallet(null)
@@ -97,18 +110,18 @@ export default function WalletPage() {
 
       {wallet && (
         <>
-          {wallet.account_type === 'platform' && (
-            <div className="flex items-start gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-              Yönetici hesabında yalnızca platformun tamamlanan işlemlerden kazandığı komisyonlar gösterilir.
-            </div>
-          )}
-
           <section className="grid gap-4 md:grid-cols-3">
-            <SummaryCard icon={Wallet} label="Net bakiye" value={money(wallet.balance)} tone="emerald" />
-            <SummaryCard icon={ArrowDownLeft} label="Toplam giriş" value={money(wallet.total_income)} tone="blue" />
-            <SummaryCard icon={ArrowUpRight} label="Toplam çıkış" value={money(wallet.total_expense)} tone="amber" />
+            <SummaryCard icon={Wallet} label={wallet.account_type === 'platform' ? 'Komisyon bakiyesi' : 'Net ticari hareket'} value={money(wallet.balance)} tone="emerald" />
+            <SummaryCard icon={ArrowDownLeft} label={wallet.account_type === 'platform' ? 'Toplam komisyon' : 'Toplam satış geliri'} value={money(wallet.total_income)} tone="blue" />
+            <SummaryCard icon={ArrowUpRight} label={wallet.account_type === 'platform' ? 'Toplam çıkış' : 'Toplam alış harcaması'} value={money(wallet.total_expense)} tone="amber" />
           </section>
+
+          {wallet.account_type === 'company' && (wallet.pending_income > 0 || wallet.pending_expense > 0) && (
+            <section className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs font-bold uppercase text-blue-600">Bekleyen satış alacağı</p><p className="mt-1 text-xl font-extrabold text-blue-900">{money(wallet.pending_income)}</p></div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-bold uppercase text-amber-700">Bekleyen alış ödemesi</p><p className="mt-1 text-xl font-extrabold text-amber-900">{money(wallet.pending_expense)}</p></div>
+            </section>
+          )}
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -139,7 +152,7 @@ export default function WalletPage() {
             )}
           </section>
 
-          <p className="text-xs leading-5 text-slate-500">Bu ekran ticari hareket kayıtlarını gösterir. Banka hesabına para yatırma veya çekme özelliği, ödeme kuruluşu entegrasyonu yapılana kadar aktif değildir.</p>
+          <p className="text-xs leading-5 text-slate-500">Bu değerler platform içindeki ticari muhasebe hareketleridir; banka hesabındaki kullanılabilir parayı göstermez. Para yatırma ve çekme, ödeme kuruluşu entegrasyonu tamamlandığında ayrıca gösterilecektir.</p>
         </>
       )}
     </main>

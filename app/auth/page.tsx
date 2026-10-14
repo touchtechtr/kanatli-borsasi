@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { ArrowLeft, Building2, LogIn, UserPlus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { INITIAL_ACTIVITY_OPTIONS } from '@/constants/company'
 
@@ -56,11 +58,8 @@ export default function AuthPage() {
         return
       }
       
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', data.user.id)
-        .maybeSingle()
+      const { data: platformAccess, error: profileError } = await supabase
+        .rpc('get_my_platform_access')
       
       if (profileError) {
         setError(
@@ -74,7 +73,7 @@ export default function AuthPage() {
       setLoading(false)
 
       window.location.replace(
-        profile?.is_admin ? '/admin/firmalar' : '/'
+        platformAccess?.is_staff ? '/admin' : '/'
       )
       return
     } else {
@@ -112,8 +111,12 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-lg">
+        <Link href="/" className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900">
+          <ArrowLeft className="h-4 w-4" /> Ana sayfaya dön
+        </Link>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-slate-900">
             {isLogin ? 'Borsa Paneline Giriş' : 'Yeni Hesap Oluştur'}
@@ -121,6 +124,27 @@ export default function AuthPage() {
           <p className="text-sm text-slate-500 mt-2">
             {isLogin ? 'Devam etmek için hesabınıza giriş yapın' : 'Bilgilerinizi girerek borsaya katılın'}
           </p>
+        </div>
+
+        <div className="mb-7 grid grid-cols-2 gap-3" role="tablist" aria-label="Hesap işlemi seçimi">
+          <button
+            type="button"
+            onClick={() => { setIsLogin(true); setError(null) }}
+            className={`rounded-2xl border p-4 text-left transition ${isLogin ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+          >
+            <LogIn className={`h-5 w-5 ${isLogin ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span className="mt-3 block text-sm font-bold text-slate-900">Giriş Yap</span>
+            <span className="mt-1 block text-xs leading-5 text-slate-500">Mevcut hesabınıza erişin.</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setIsLogin(false); setError(null) }}
+            className={`rounded-2xl border p-4 text-left transition ${!isLogin ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
+          >
+            <UserPlus className={`h-5 w-5 ${!isLogin ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span className="mt-3 block text-sm font-bold text-slate-900">Kayıt Ol</span>
+            <span className="mt-1 block text-xs leading-5 text-slate-500">Firma hesabınızı oluşturun.</span>
+          </button>
         </div>
 
         {error && (
@@ -258,13 +282,7 @@ export default function AuthPage() {
           </button>
         </form>
 
-        <div className="text-center mt-6">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-sm text-slate-600 hover:underline font-medium"
-          >
-            {isLogin ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın'}
-          </button>
+        {!isLogin && <div className="mt-5 flex items-start gap-3 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600"><Building2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600"/><p>Firma kaydınız yönetici incelemesinden sonra etkinleşir. Faaliyet belgelerinizi kayıt sonrasında profilinizden tamamlayabilirsiniz.</p></div>}
         </div>
       </div>
     </main>

@@ -14,6 +14,7 @@ import {
   Crown,
   Filter,
   MapPin,
+  LogIn,
   Microscope,
   Package,
   Plus,
@@ -27,6 +28,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
+import ListingImagePicker from "@/components/listings/ListingImagePicker";
+import { uploadListingImages } from "@/lib/listing-images";
 
 type ListingSource = "listings" | "feed_listings" | "livestock_listings";
 type OfferKind = "listing" | "feed" | "livestock";
@@ -68,6 +71,7 @@ type UnifiedListing = {
   isUrgent: boolean;
   priority: number;
   promotionEndsAt: string | null;
+  imageUrl: string | null;
 };
 
 type PromotionRow = {
@@ -145,6 +149,7 @@ function HomeContent() {
   const [showGeneralForm, setShowGeneralForm] = useState(false);
   const [offerForm, setOfferForm] = useState<OfferForm | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [generalImageFiles, setGeneralImageFiles] = useState<File[]>([]);
 
   const [newListing, setNewListing] = useState({
     title: "",
@@ -276,6 +281,22 @@ function HomeContent() {
       ...new Set(rawListings.map((item) => item.company_id).filter(Boolean)),
     ];
 
+    const listingIds = rawListings.map((item) => item.id);
+    const imageResult = listingIds.length
+      ? await supabase
+          .from('listing_images')
+          .select('listing_type, listing_id, public_url, position, is_primary')
+          .in('listing_id', listingIds)
+          .order('position')
+      : { data: [], error: null };
+    const imageMap = new Map<string, string>();
+    for (const image of imageResult.data ?? []) {
+      const imageKey = `${image.listing_type}:${image.listing_id}`;
+      if (!imageMap.has(imageKey) || image.is_primary) {
+        imageMap.set(imageKey, image.public_url);
+      }
+    }
+
     const companyResult = companyIds.length
       ? await supabase
           .from("public_companies")
@@ -331,6 +352,7 @@ function HomeContent() {
         promotionEndsAt:
           itemPromotions.sort((a, b) => b.priority - a.priority)[0]?.ends_at ??
           null,
+        imageUrl: imageMap.get(key) ?? null,
       };
     });
 
@@ -567,7 +589,7 @@ function HomeContent() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase.from("listings").insert({
+    const { data: createdListing, error } = await supabase.from("listings").insert({
       company_id: company.id,
       user_id: user.id,
       title: newListing.title.trim(),
@@ -577,10 +599,18 @@ function HomeContent() {
       price: Number(newListing.price),
       city: newListing.city.trim(),
       status: "aktif",
-    });
+    }).select('id').single();
 
     if (error) alert("İlan oluşturulamadı: " + error.message);
     else {
+      try {
+        await uploadListingImages(supabase,generalImageFiles,{listingType:'listings',listingId:createdListing.id,companyId:company.id,userId:user.id});
+      } catch (imageError) {
+        await supabase.from('listings').delete().eq('id',createdListing.id)
+        alert('Görseller yüklenemediği için ilan kaydedilmedi: '+(imageError instanceof Error?imageError.message:'Bilinmeyen hata'))
+        setSubmitting(false)
+        return
+      }
       await dispatchNotificationEmails(supabase);
       setShowGeneralForm(false);
       setNewListing({
@@ -591,6 +621,7 @@ function HomeContent() {
         price: "",
         city: "Antalya",
       });
+      setGeneralImageFiles([]);
       await loadMarketplace(true);
     }
     setSubmitting(false);
@@ -625,6 +656,14 @@ function HomeContent() {
                 >
                   <Plus className="h-4 w-4" /> Yeni İlan Ver
                 </button>
+                {!user && (
+                  <Link
+                    href="/auth"
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-50"
+                  >
+                    <LogIn className="h-4 w-4" /> Giriş Yap
+                  </Link>
+                )}
                 <Link
                   href="/borsa"
                   className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold transition hover:bg-white/15"
@@ -953,6 +992,9 @@ function HomeContent() {
             onSubmit={submitGeneralListing}
             className="grid gap-4 sm:grid-cols-2"
           >
+            <div className="sm:col-span-2">
+              <ListingImagePicker files={generalImageFiles} onChange={setGeneralImageFiles} />
+            </div>
             <Field label="Firma">
               <select
                 value={userCompanyId}
@@ -1211,6 +1253,9 @@ function FeaturedCard({
     <article className="relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-5 shadow-md">
       <div className="absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-amber-200/30" />
       <div className="relative">
+        <div className="mb-4 overflow-hidden rounded-xl bg-slate-100">
+          {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="aspect-[16/9] w-full object-cover" /> : <div className="flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-slate-100 to-emerald-50"><Package className="h-9 w-9 text-slate-300" /></div>}
+        </div>
         <div className="flex flex-wrap gap-2">
           <PromotionBadges item={item} />
           <span
@@ -1251,7 +1296,10 @@ function ListingRow({
     <article
       className={`relative p-4 transition hover:bg-slate-50 md:p-5 ${item.isHighlighted ? "bg-amber-50/60 ring-2 ring-inset ring-amber-300" : ""}`}
     >
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.75fr)_auto] lg:items-center">
+      <div className="grid gap-4 lg:grid-cols-[112px_minmax(0,1.45fr)_minmax(300px,0.75fr)_auto] lg:items-center">
+        <div className="overflow-hidden rounded-xl bg-slate-100">
+          {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="aspect-[4/3] w-full object-cover" /> : <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-slate-100 to-emerald-50"><Package className="h-7 w-7 text-slate-300" /></div>}
+        </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span

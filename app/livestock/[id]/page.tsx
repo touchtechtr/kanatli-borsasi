@@ -90,6 +90,7 @@ export default function LivestockDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
 
   const [offerQuantity, setOfferQuantity] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
@@ -140,18 +141,20 @@ export default function LivestockDetailPage() {
         seller = sellerData ?? null;
       }
 
-      const [{ data: settings }, { data: authData }] = await Promise.all([
+      const [{ data: settings }, { data: authData }, { data: imageData }] = await Promise.all([
         supabase
           .from("platform_settings")
           .select("trade_commission_rate")
           .eq("id", true)
           .maybeSingle(),
         supabase.auth.getUser(),
+        supabase.from('listing_images').select('public_url').eq('listing_type','livestock_listings').eq('listing_id',listingId).order('position'),
       ]);
 
       if (!mounted) return;
 
       if (seller?.name) setSellerName(seller.name);
+      setImages((imageData ?? []).map((image) => image.public_url));
       setCommissionRate(Number(settings?.trade_commission_rate ?? 5));
 
       const user = authData.user;
@@ -373,6 +376,14 @@ export default function LivestockDetailPage() {
               </span>
             </div>
           </div>
+
+          {images.length > 0 && (
+            <div className="grid gap-3 bg-white p-4 sm:grid-cols-4 md:p-6">
+              <img src={images[0]} alt={`${listing.title} ana görseli`} className="aspect-[16/10] w-full rounded-2xl object-cover sm:col-span-3 sm:row-span-2 sm:h-full" />
+              {images.slice(1,3).map((url,index)=><img key={url} src={url} alt={`${listing.title} görsel ${index+2}`} className="aspect-[16/10] w-full rounded-xl object-cover" />)}
+              {images.length>3&&<div className="flex min-h-24 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white">+{images.length-3} görsel</div>}
+            </div>
+          )}
 
           <div className="grid gap-6 p-6 lg:grid-cols-[1fr_360px] md:p-8">
             <div className="space-y-6">

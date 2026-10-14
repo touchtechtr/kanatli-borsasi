@@ -71,6 +71,11 @@ function getAuditHref(row: AuditRow) {
       return row.subject_user_id
         ? `/admin/kullanicilar/${row.subject_user_id}`
         : '/admin/kullanicilar'
+    case 'trade_payments':
+      return '/admin/finans'
+    case 'platform_staff':
+    case 'company_members':
+      return '/admin/personel'
     default:
       return null
   }

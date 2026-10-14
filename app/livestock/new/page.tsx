@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
+import ListingImagePicker from "@/components/listings/ListingImagePicker";
+import { uploadListingImages } from "@/lib/listing-images";
 
 type FormData = {
   title: string;
@@ -109,6 +111,7 @@ export default function NewLivestockPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activityRequired, setActivityRequired] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
 
   const quantity = Number(form.quantity);
   const price = Number(form.price);
@@ -205,7 +208,7 @@ export default function NewLivestockPage() {
       return;
     }
 
-    const { error } = await supabase.from("livestock_listings").insert({
+    const { data: createdListing, error } = await supabase.from("livestock_listings").insert({
       user_id: user.id,
       company_id: company.id,
       title: form.title.trim(),
@@ -231,7 +234,7 @@ export default function NewLivestockPage() {
         : null,
       description: form.description.trim() || null,
       status: "aktif",
-    });
+    }).select('id').single();
 
     if (error) {
       setErrorMessage("İlan eklenirken hata oluştu: " + error.message);
@@ -240,6 +243,15 @@ export default function NewLivestockPage() {
       );
       setLoading(false);
       return;
+    }
+
+    try {
+      await uploadListingImages(supabase,imageFiles,{listingType:'livestock_listings',listingId:createdListing.id,companyId:company.id,userId:user.id});
+    } catch (imageError) {
+      await supabase.from('livestock_listings').delete().eq('id',createdListing.id)
+      setErrorMessage('Görseller yüklenemediği için ilan kaydedilmedi: '+(imageError instanceof Error?imageError.message:'Bilinmeyen hata'))
+      setLoading(false)
+      return
     }
 
     await dispatchNotificationEmails(supabase);
@@ -302,6 +314,9 @@ export default function NewLivestockPage() {
           className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
         >
           <div className="space-y-6">
+            <FormSection title="İlan görselleri" description="Net ve güncel görseller alıcı güvenini artırır.">
+              <div className="sm:col-span-2"><ListingImagePicker files={imageFiles} onChange={setImageFiles}/></div>
+            </FormSection>
             <FormSection
               title="Temel ilan bilgileri"
               description="İlanın pazarda doğru kategoride ve doğru konumda görünmesini sağlar."
