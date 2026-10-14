@@ -251,7 +251,7 @@ function HomeContent() {
         typeLabel: "Genel / Yem",
         category: item.category,
         district: null,
-        detailHref: null,
+        detailHref: `/ilan/listings/${item.id}`,
         extraLabel: null,
       })),
       ...(feedResult.data ?? []).map((item) => ({
@@ -260,7 +260,7 @@ function HomeContent() {
         offerKind: "feed" as const,
         typeLabel: "Yem İlanı",
         category: item.category,
-        detailHref: null,
+        detailHref: `/ilan/feed_listings/${item.id}`,
         extraLabel:
           [item.feed_form, item.packaging_type].filter(Boolean).join(" · ") ||
           null,
@@ -284,10 +284,10 @@ function HomeContent() {
     const listingIds = rawListings.map((item) => item.id);
     const imageResult = listingIds.length
       ? await supabase
-          .from('listing_images')
-          .select('listing_type, listing_id, public_url, position, is_primary')
-          .in('listing_id', listingIds)
-          .order('position')
+          .from("listing_images")
+          .select("listing_type, listing_id, public_url, position, is_primary")
+          .in("listing_id", listingIds)
+          .order("position")
       : { data: [], error: null };
     const imageMap = new Map<string, string>();
     for (const image of imageResult.data ?? []) {
@@ -589,27 +589,41 @@ function HomeContent() {
     }
 
     setSubmitting(true);
-    const { data: createdListing, error } = await supabase.from("listings").insert({
-      company_id: company.id,
-      user_id: user.id,
-      title: newListing.title.trim(),
-      category: newListing.category,
-      quantity: Number(newListing.quantity),
-      unit: newListing.unit.trim(),
-      price: Number(newListing.price),
-      city: newListing.city.trim(),
-      status: "aktif",
-    }).select('id').single();
+    const { data: createdListing, error } = await supabase
+      .from("listings")
+      .insert({
+        company_id: company.id,
+        user_id: user.id,
+        title: newListing.title.trim(),
+        category: newListing.category,
+        quantity: Number(newListing.quantity),
+        unit: newListing.unit.trim(),
+        price: Number(newListing.price),
+        city: newListing.city.trim(),
+        status: "aktif",
+      })
+      .select("id")
+      .single();
 
     if (error) alert("İlan oluşturulamadı: " + error.message);
     else {
       try {
-        await uploadListingImages(supabase,generalImageFiles,{listingType:'listings',listingId:createdListing.id,companyId:company.id,userId:user.id});
+        await uploadListingImages(supabase, generalImageFiles, {
+          listingType: "listings",
+          listingId: createdListing.id,
+          companyId: company.id,
+          userId: user.id,
+        });
       } catch (imageError) {
-        await supabase.from('listings').delete().eq('id',createdListing.id)
-        alert('Görseller yüklenemediği için ilan kaydedilmedi: '+(imageError instanceof Error?imageError.message:'Bilinmeyen hata'))
-        setSubmitting(false)
-        return
+        await supabase.from("listings").delete().eq("id", createdListing.id);
+        alert(
+          "Görseller yüklenemediği için ilan kaydedilmedi: " +
+            (imageError instanceof Error
+              ? imageError.message
+              : "Bilinmeyen hata"),
+        );
+        setSubmitting(false);
+        return;
       }
       await dispatchNotificationEmails(supabase);
       setShowGeneralForm(false);
@@ -836,7 +850,7 @@ function HomeContent() {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div>
             {loading ? (
               <div className="p-14 text-center text-sm text-slate-400">
                 İlanlar yükleniyor…
@@ -856,7 +870,7 @@ function HomeContent() {
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredListings.slice(0, visibleCount).map((item) => (
                   <ListingRow
                     key={item.key}
@@ -993,7 +1007,10 @@ function HomeContent() {
             className="grid gap-4 sm:grid-cols-2"
           >
             <div className="sm:col-span-2">
-              <ListingImagePicker files={generalImageFiles} onChange={setGeneralImageFiles} />
+              <ListingImagePicker
+                files={generalImageFiles}
+                onChange={setGeneralImageFiles}
+              />
             </div>
             <Field label="Firma">
               <select
@@ -1254,7 +1271,17 @@ function FeaturedCard({
       <div className="absolute right-0 top-0 h-24 w-24 rounded-bl-full bg-amber-200/30" />
       <div className="relative">
         <div className="mb-4 overflow-hidden rounded-xl bg-slate-100">
-          {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="aspect-[16/9] w-full object-cover" /> : <div className="flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-slate-100 to-emerald-50"><Package className="h-9 w-9 text-slate-300" /></div>}
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.title}
+              className="aspect-[16/9] w-full object-cover"
+            />
+          ) : (
+            <div className="flex aspect-[16/9] items-center justify-center bg-gradient-to-br from-slate-100 to-emerald-50">
+              <Package className="h-9 w-9 text-slate-300" />
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <PromotionBadges item={item} />
@@ -1294,56 +1321,74 @@ function ListingRow({
 }) {
   return (
     <article
-      className={`relative p-4 transition hover:bg-slate-50 md:p-5 ${item.isHighlighted ? "bg-amber-50/60 ring-2 ring-inset ring-amber-300" : ""}`}
+      className={`group relative flex min-h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl ${item.isHighlighted ? "border-amber-300 ring-2 ring-amber-200" : "border-slate-200"}`}
     >
-      <div className="grid gap-4 lg:grid-cols-[112px_minmax(0,1.45fr)_minmax(300px,0.75fr)_auto] lg:items-center">
-        <div className="overflow-hidden rounded-xl bg-slate-100">
-          {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="aspect-[4/3] w-full object-cover" /> : <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-slate-100 to-emerald-50"><Package className="h-7 w-7 text-slate-300" /></div>}
-        </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 ${typeStyles[item.source]}`}
-            >
-              {item.typeLabel}
-            </span>
-            <PromotionBadges item={item} />
-            <span className="text-[11px] text-slate-400">
-              {new Date(item.createdAt).toLocaleDateString("tr-TR")}
-            </span>
+      <div className="relative overflow-hidden bg-slate-100">
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt={item.title}
+            className="aspect-[16/10] w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="flex aspect-[16/10] items-center justify-center bg-gradient-to-br from-slate-100 via-white to-emerald-50">
+            <Package className="h-10 w-10 text-slate-300" />
           </div>
-          {item.detailHref ? (
-            <Link
-              href={item.detailHref}
-              className="mt-2 block truncate text-base font-extrabold text-slate-900 hover:text-emerald-700"
-            >
-              {item.title}
-            </Link>
-          ) : (
-            <h3 className="mt-2 truncate text-base font-extrabold text-slate-900">
-              {item.title}
-            </h3>
+        )}
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[10px] font-bold shadow-sm ring-1 ${typeStyles[item.source]}`}
+          >
+            {item.typeLabel}
+          </span>
+          <PromotionBadges item={item} />
+        </div>
+        <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/75 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur">
+          {new Date(item.createdAt).toLocaleDateString("tr-TR")}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs font-bold text-emerald-700">{item.category}</p>
+          <BadgeCheck
+            className="h-4 w-4 flex-none text-blue-600"
+            aria-label="Doğrulanmış firma"
+          />
+        </div>
+
+        <Link
+          href={item.detailHref || "#"}
+          className="mt-2 line-clamp-2 min-h-12 text-base font-extrabold leading-6 text-slate-900 transition group-hover:text-emerald-700"
+        >
+          {item.title}
+        </Link>
+
+        <div className="mt-3 space-y-1.5 text-xs text-slate-500">
+          <span className="flex items-center gap-1.5 truncate">
+            <Building2 className="h-3.5 w-3.5 flex-none" />
+            {item.companyName}
+          </span>
+          <span className="flex items-center gap-1.5 truncate">
+            <MapPin className="h-3.5 w-3.5 flex-none" />
+            {[item.city, item.district].filter(Boolean).join(" / ")}
+          </span>
+          {item.extraLabel && (
+            <span className="block truncate">{item.extraLabel}</span>
           )}
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-            <span className="inline-flex items-center gap-1">
-              <Building2 className="h-3.5 w-3.5" />
-              {item.companyName}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5" />
-              {[item.city, item.district].filter(Boolean).join(" / ")}
-            </span>
-            {item.extraLabel && <span>{item.extraLabel}</span>}
-          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
           <Metric
             label="Miktar"
             value={`${item.quantity.toLocaleString("tr-TR")} ${item.unit}`}
           />
           <Metric label="Birim fiyat" value={money(item.price)} accent />
         </div>
-        <CardActions item={item} onOffer={onOffer} own={own} compact />
+
+        <div className="mt-auto pt-4">
+          <CardActions item={item} onOffer={onOffer} own={own} />
+        </div>
       </div>
     </article>
   );
