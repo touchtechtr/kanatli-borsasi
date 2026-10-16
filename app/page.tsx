@@ -535,6 +535,25 @@ function HomeContent() {
     return { feed, livestock, agri, other };
   }, [filteredListings]);
 
+  const filteredPurchaseRequests = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
+    return purchaseRequests.filter((item) => {
+      const searchable = [item.title, item.animal_type, item.city, item.company_name]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("tr-TR");
+      return (!normalizedQuery || searchable.includes(normalizedQuery)) &&
+        (cityFilter === ALL || item.city === cityFilter);
+    });
+  }, [purchaseRequests, query, cityFilter]);
+
+  const totalSearchResults =
+    marketplaceSections.feed.length +
+    marketplaceSections.livestock.length +
+    marketplaceSections.agri.length +
+    marketplaceSections.other.length +
+    filteredPurchaseRequests.length;
+
   const visibleMarketSections: MarketView[] = marketView === "all" ? ["feed", "livestock", "agri", "slaughterhouse", "other"] : [marketView];
 
   const featuredListings = useMemo(
@@ -553,6 +572,11 @@ function HomeContent() {
 
   const closeSearch = () => {
     setShowSearch(false);
+  };
+
+  const executeSearch = () => {
+    setVisibleCount(PAGE_SIZE);
+    window.setTimeout(() => document.getElementById("ilan-akisi")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const resetFilters = () => {
@@ -843,18 +867,33 @@ function HomeContent() {
         {showSearch && (
           <section id="ilan-arama" className="scroll-mt-8 rounded-3xl border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-4 shadow-xl shadow-cyan-100/60 md:p-6">
             <div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">Akıllı pazar araması</p><h2 className="mt-1 text-xl font-black text-slate-900">Aradığınız ilana hızla ulaşın</h2><p className="mt-1 text-sm text-slate-500">Ürün, firma, şehir ve ilan türüne göre sonuçları daraltın.</p></div><button type="button" onClick={closeSearch} aria-label="Aramayı kapat" className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-900"><X className="h-5 w-5" /></button></div>
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setVisibleCount(PAGE_SIZE);
-                }}
-                placeholder="İlan, ürün, firma, şehir veya ırk ara..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-              />
-            </div>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                executeSearch();
+              }}
+              className="flex flex-col gap-2 sm:flex-row"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-600" />
+                <input
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  placeholder="İlan, ürün, firma, şehir veya hayvan türü ara..."
+                  className="w-full rounded-xl border-2 border-cyan-200 bg-white py-3.5 pl-12 pr-4 text-sm font-medium outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                  autoFocus
+                />
+              </div>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-600 px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-cyan-200 transition hover:-translate-y-0.5 hover:from-cyan-500 hover:to-emerald-500"
+              >
+                <Search className="h-4 w-4" /> Aramayı Uygula
+              </button>
+            </form>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
               <FilterSelect
                 value={typeFilter}
@@ -903,6 +942,12 @@ function HomeContent() {
               >
                 Temizle
               </button>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-100 bg-white/80 px-4 py-3 text-xs">
+              <span className="font-semibold text-slate-600">
+                {query.trim() ? <><strong className="text-cyan-700">“{query.trim()}”</strong> için {totalSearchResults} sonuç bulundu.</> : <>Arama kelimesi yazın veya filtrelerden seçim yapın.</>}
+              </span>
+              <span className="text-slate-400">Enter tuşu veya “Aramayı Uygula” düğmesiyle sonuçlara geçin.</span>
             </div>
           </section>
   
@@ -958,8 +1003,8 @@ function HomeContent() {
               {visibleMarketSections.includes("agri") && <MarketplaceSection title="Zirai girdi ve tarım malzemeleri" description="Gübre, tohum, fide, bitki koruma, sulama ve üretim ekipmanı ilanları." count={marketplaceSections.agri.length} href="/?market=agri#ilan-akisi" accent="emerald">
                 {marketplaceSections.agri.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
-              {visibleMarketSections.includes("slaughterhouse") && <MarketplaceSection title="Kesimhane toplu alım talepleri" description="Onaylı kesimhanelerin canlı hayvan tedariki için yayınladığı toplu alım talepleri." count={purchaseRequests.length} href="/kesimhane/alim-merkezi" accent="violet">
-                {purchaseRequests.slice(0, 6).map((item) => <PurchaseRequestCard key={item.id} item={item} />)}
+              {visibleMarketSections.includes("slaughterhouse") && <MarketplaceSection title="Kesimhane toplu alım talepleri" description="Onaylı kesimhanelerin canlı hayvan tedariki için yayınladığı toplu alım talepleri." count={filteredPurchaseRequests.length} href="/kesimhane/alim-merkezi" accent="violet">
+                {filteredPurchaseRequests.slice(0, 6).map((item) => <PurchaseRequestCard key={item.id} item={item} />)}
               </MarketplaceSection>}
               {visibleMarketSections.includes("other") && <MarketplaceSection title="Diğer ticari ilanlar" description="Desteklenen diğer tarımsal ürün ve ticari fırsatlar." count={marketplaceSections.other.length} href="/?market=other#ilan-akisi" accent="slate">
                 {marketplaceSections.other.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
