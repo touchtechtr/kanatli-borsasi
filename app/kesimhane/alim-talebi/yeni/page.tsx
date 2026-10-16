@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, CheckCircle2, Factory, Loader2, LockKeyhole, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
+import { getCompanyOperationAccess } from "@/lib/company-operation-access";
 
 type PurchaseAccess = {
   authenticated: boolean; allowed: boolean; is_platform_staff?: boolean;
@@ -45,7 +46,28 @@ export default function NewRequest() {
       if (accessError) {
         setError(`Yetki kontrolü yapılamadı: ${accessError.message}`);
         setAccess({ authenticated: true, allowed: false, reason: "Yetki kontrolü tamamlanamadı." });
-      } else setAccess(data as PurchaseAccess);
+      } else {
+        const current = data as PurchaseAccess;
+        if (current.company_id) {
+          const centralAccess = await getCompanyOperationAccess(
+            supabase,
+            current.company_id,
+            "create_slaughterhouse_purchase",
+          );
+          if (!mounted) return;
+          setAccess({
+            ...current,
+            allowed: current.allowed && centralAccess.allowed,
+            reason: centralAccess.allowed ? current.reason : centralAccess.message,
+            has_required_activity:
+              centralAccess.code === "activity_required"
+                ? false
+                : current.has_required_activity,
+          });
+        } else {
+          setAccess(current);
+        }
+      }
       setCheckingAccess(false);
     };
     void checkAccess();
