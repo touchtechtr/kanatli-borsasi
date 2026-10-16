@@ -182,6 +182,15 @@ export default function NewLivestockPage() {
       return;
     }
 
+    const { data: platformAccess } = await supabase.rpc("get_my_platform_access");
+    if (platformAccess?.is_staff && platformAccess?.active) {
+      setLoading(false);
+      setErrorMessage(
+        "Platform personeli ilan oluşturamaz. Ticari işlemler için ayrı bir şirket hesabı kullanın.",
+      );
+      return;
+    }
+
     const { data: company, error: companyError } = await supabase
       .from("companies")
       .select("id, status")

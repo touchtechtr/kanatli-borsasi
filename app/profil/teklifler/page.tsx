@@ -1,0 +1,529 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  Handshake,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+type OfferStatus =
+  "beklemede" | "kabul_edildi" | "reddedildi" | "iptal_edildi" | "tamamlandi";
+type Offer = {
+  id: string;
+  listing_kind: "listing" | "feed" | "livestock";
+  listing_id: string;
+  buyer_company_id: string;
+  seller_company_id: string;
+  product_title: string;
+  offered_quantity: number;
+  unit: string;
+  seller_unit_price: number;
+  buyer_unit_price: number;
+  subtotal_amount: number;
+  commission_amount: number;
+  total_amount: number;
+  message: string | null;
+  status: OfferStatus;
+  admin_status: "beklemede" | "onaylandi" | "reddedildi";
+  created_at: string;
+  buyerName: string;
+  sellerName: string;
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  beklemede: "Yanıt bekliyor",
+  kabul_edildi: "Kabul edildi",
+  reddedildi: "Reddedildi",
+  iptal_edildi: "İptal edildi",
+  tamamlandi: "Tamamlandı",
+};
+
+const money = (value: number) =>
+  Number(value || 0).toLocaleString("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+  });
+
+export default function CompanyOffersPage() {
+  const supabase = useMemo(() => createClient(), []);
+  const [company, setCompany] = useState<{
+    id: string;
+    name: string;
+    status: string;
+  } | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [direction, setDirection] = useState<"all" | "incoming" | "outgoing">(
+    "all",
+  );
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadOffers = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage(null);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      window.location.replace("/auth");
+      return;
+    }
+    const { data: companyData, error: companyError } = await supabase
+      .from("companies")
+      .select("id, name, status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (companyError || !companyData) {
+      setErrorMessage(companyError?.message || "Şirket hesabı bulunamadı.");
+      setLoading(false);
+      return;
+    }
+    setCompany(companyData);
+
+    const { data, error } = await supabase
+      .from("trade_offers")
+      .select(
+        "id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, seller_unit_price, buyer_unit_price, subtotal_amount, commission_amount, total_amount, message, status, admin_status, created_at",
+      )
+      .or(
+        `buyer_company_id.eq.${companyData.id},seller_company_id.eq.${companyData.id}`,
+      )
+      .order("created_at", { ascending: false });
+    if (error) {
+      setErrorMessage("Teklifler yüklenemedi: " + error.message);
+      setOffers([]);
+      setLoading(false);
+      return;
+    }
+
+    const rows = data ?? [];
+    const companyIds = [
+      ...new Set(
+        rows.flatMap((offer) => [
+          offer.buyer_company_id,
+          offer.seller_company_id,
+        ]),
+      ),
+    ];
+    const { data: companies } = companyIds.length
+      ? await supabase
+          .from("public_companies")
+          .select("id, name")
+          .in("id", companyIds)
+      : { data: [] };
+    const nameMap = new Map(
+      (companies ?? []).map((item) => [item.id, item.name]),
+    );
+    setOffers(
+      rows.map((offer) => ({
+        ...offer,
+        buyerName: nameMap.get(offer.buyer_company_id) || "Alıcı firma",
+        sellerName: nameMap.get(offer.seller_company_id) || "Satıcı firma",
+      })) as Offer[],
+    );
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    const requestedDirection = new URLSearchParams(window.location.search).get(
+      "direction",
+    );
+    if (requestedDirection === "incoming" || requestedDirection === "outgoing")
+      setDirection(requestedDirection);
+    void loadOffers();
+  }, [loadOffers]);
+
+  const filtered = useMemo(
+    () =>
+      offers.filter((offer) => {
+        const directionMatch =
+          direction === "all" ||
+          (direction === "incoming"
+            ? offer.seller_company_id === company?.id
+            : offer.buyer_company_id === company?.id);
+        return (
+          directionMatch &&
+          (statusFilter === "all" || offer.status === statusFilter)
+        );
+      }),
+    [offers, company?.id, direction, statusFilter],
+  );
+
+  const incoming = offers.filter(
+    (offer) => offer.seller_company_id === company?.id,
+  );
+  const outgoing = offers.filter(
+    (offer) => offer.buyer_company_id === company?.id,
+  );
+  const waitingIncoming = incoming.filter(
+    (offer) =>
+      offer.admin_status === "onaylandi" && offer.status === "beklemede",
+  ).length;
+  const activeTotal = offers.filter((offer) =>
+    ["beklemede", "kabul_edildi"].includes(offer.status),
+  ).length;
+  const completedTotal = offers.filter(
+    (offer) => offer.status === "tamamlandi",
+  ).length;
+
+  const changeStatus = async (offer: Offer, nextStatus: OfferStatus) => {
+    const descriptions: Record<string, string> = {
+      kabul_edildi: "teklifi kabul etmek",
+      reddedildi: "teklifi reddetmek",
+      iptal_edildi: "teklifi iptal etmek",
+      tamamlandi: "işlemi tamamlandı olarak işaretlemek",
+    };
+    if (
+      !confirm(
+        `${descriptions[nextStatus] || "işlemi yapmak"} istediğinize emin misiniz?`,
+      )
+    )
+      return;
+    setProcessingId(offer.id);
+    setErrorMessage(null);
+    const { error } = await supabase
+      .from("trade_offers")
+      .update({ status: nextStatus })
+      .eq("id", offer.id);
+    if (error) setErrorMessage("Teklif güncellenemedi: " + error.message);
+    else await loadOffers();
+    setProcessingId(null);
+  };
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">
+              Şirket ticaret merkezi
+            </p>
+            <h1 className="mt-1 text-3xl font-extrabold text-slate-900">
+              Ticari Teklifler
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              {company?.name || "Şirketiniz"} adına gelen ve gönderilen
+              teklifleri tek ekrandan yönetin.
+            </p>
+          </div>
+          <button
+            onClick={() => void loadOffers()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Yenile
+          </button>
+        </header>
+
+        {errorMessage && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat
+            label="Gelen teklif"
+            value={incoming.length}
+            icon={ArrowDownLeft}
+          />
+          <Stat
+            label="Gönderilen teklif"
+            value={outgoing.length}
+            icon={ArrowUpRight}
+          />
+          <Stat
+            label="Yanıt bekleyen"
+            value={waitingIncoming}
+            icon={Clock3}
+            tone="amber"
+          />
+          <Stat
+            label="Tamamlanan"
+            value={completedTotal}
+            icon={CheckCircle2}
+            tone="emerald"
+          />
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-2 overflow-x-auto">
+              <Tab
+                active={direction === "all"}
+                onClick={() => setDirection("all")}
+              >
+                Tümü ({offers.length})
+              </Tab>
+              <Tab
+                active={direction === "incoming"}
+                onClick={() => setDirection("incoming")}
+              >
+                <ArrowDownLeft className="h-4 w-4" />
+                Gelen ({incoming.length})
+              </Tab>
+              <Tab
+                active={direction === "outgoing"}
+                onClick={() => setDirection("outgoing")}
+              >
+                <ArrowUpRight className="h-4 w-4" />
+                Gönderilen ({outgoing.length})
+              </Tab>
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+            >
+              <option value="all">Tüm durumlar</option>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-14 text-center text-sm text-slate-400">
+              Teklifler yükleniyor…
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-14 text-center">
+              <Handshake className="mx-auto h-10 w-10 text-slate-300" />
+              <h2 className="mt-3 font-extrabold text-slate-700">
+                Bu filtrede teklif bulunmuyor
+              </h2>
+            </div>
+          ) : (
+            filtered.map((offer) => {
+              const isIncoming = offer.seller_company_id === company?.id;
+              const detailHref =
+                offer.listing_kind === "livestock"
+                  ? `/livestock/${offer.listing_id}`
+                  : `/ilan/${offer.listing_kind === "feed" ? "feed_listings" : "listings"}/${offer.listing_id}`;
+              return (
+                <article
+                  key={offer.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${isIncoming ? "bg-blue-50 text-blue-700" : "bg-violet-50 text-violet-700"}`}
+                        >
+                          {isIncoming ? (
+                            <ArrowDownLeft className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpRight className="h-3 w-3" />
+                          )}
+                          {isIncoming ? "GELEN" : "GÖNDERİLEN"}
+                        </span>
+                        <Status status={offer.status} />
+                        <AdminStatus status={offer.admin_status} />
+                      </div>
+                      <h2 className="mt-3 truncate text-lg font-extrabold text-slate-900">
+                        {offer.product_title}
+                      </h2>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {offer.buyerName} → {offer.sellerName} ·{" "}
+                        {new Date(offer.created_at).toLocaleString("tr-TR")}
+                      </p>
+                      {offer.message && (
+                        <p className="mt-3 line-clamp-2 text-sm text-slate-600">
+                          {offer.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:w-[520px]">
+                      <Metric
+                        label="Miktar"
+                        value={`${Number(offer.offered_quantity).toLocaleString("tr-TR")} ${offer.unit}`}
+                      />
+                      <Metric
+                        label={isIncoming ? "Birim fiyat" : "Komisyonlu fiyat"}
+                        value={money(
+                          isIncoming
+                            ? offer.seller_unit_price
+                            : offer.buyer_unit_price,
+                        )}
+                      />
+                      <Metric
+                        label={isIncoming ? "Şirket alacağı" : "Alıcı toplamı"}
+                        value={money(
+                          isIncoming
+                            ? offer.subtotal_amount
+                            : offer.total_amount,
+                        )}
+                      />
+                      <Metric
+                        label="Komisyon"
+                        value={money(offer.commission_amount)}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 xl:w-44 xl:flex-col">
+                      <Link
+                        href={detailHref}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        İlan
+                      </Link>
+                      {isIncoming &&
+                        offer.admin_status === "onaylandi" &&
+                        offer.status === "beklemede" && (
+                          <>
+                            <button
+                              disabled={processingId === offer.id}
+                              onClick={() =>
+                                void changeStatus(offer, "kabul_edildi")
+                              }
+                              className="rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white"
+                            >
+                              Kabul et
+                            </button>
+                            <button
+                              disabled={processingId === offer.id}
+                              onClick={() =>
+                                void changeStatus(offer, "reddedildi")
+                              }
+                              className="rounded-xl bg-red-50 px-3 py-2.5 text-xs font-bold text-red-700"
+                            >
+                              Reddet
+                            </button>
+                          </>
+                        )}
+                      {!isIncoming && offer.status === "beklemede" && (
+                        <button
+                          disabled={processingId === offer.id}
+                          onClick={() =>
+                            void changeStatus(offer, "iptal_edildi")
+                          }
+                          className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-bold text-slate-700"
+                        >
+                          İptal et
+                        </button>
+                      )}
+                      {isIncoming && offer.status === "kabul_edildi" && (
+                        <button
+                          disabled={processingId === offer.id}
+                          onClick={() => void changeStatus(offer, "tamamlandi")}
+                          className="rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-bold text-white"
+                        >
+                          Tamamlandı
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </section>
+
+        {activeTotal > 0 && (
+          <p className="text-center text-xs text-slate-400">
+            Şirketinizin devam eden {activeTotal} ticari teklifi bulunuyor.
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  icon: Icon,
+  tone = "slate",
+}: {
+  label: string;
+  value: number;
+  icon: typeof Handshake;
+  tone?: "slate" | "amber" | "emerald";
+}) {
+  const color =
+    tone === "amber"
+      ? "text-amber-600 bg-amber-50"
+      : tone === "emerald"
+        ? "text-emerald-600 bg-emerald-50"
+        : "text-slate-600 bg-white";
+  return (
+    <div
+      className={`rounded-2xl border border-slate-200 p-4 shadow-sm ${color}`}
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold">{label}</p>
+        <Icon className="h-4 w-4" />
+      </div>
+      <p className="mt-2 text-2xl font-extrabold text-slate-900">{value}</p>
+    </div>
+  );
+}
+function Tab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold ${active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600"}`}
+    >
+      {children}
+    </button>
+  );
+}
+function Status({ status }: { status: string }) {
+  const style =
+    status === "kabul_edildi" || status === "tamamlandi"
+      ? "bg-emerald-50 text-emerald-700"
+      : status === "beklemede"
+        ? "bg-amber-50 text-amber-700"
+        : status === "reddedildi"
+          ? "bg-red-50 text-red-700"
+          : "bg-slate-100 text-slate-600";
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${style}`}>
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
+}
+function AdminStatus({ status }: { status: string }) {
+  return (
+    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">
+      {status === "onaylandi"
+        ? "Yönetim onaylı"
+        : status === "reddedildi"
+          ? "Yönetim reddetti"
+          : "Yönetim incelemesinde"}
+    </span>
+  );
+}
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+      <p className="text-[9px] font-bold uppercase text-slate-400">{label}</p>
+      <p className="mt-1 truncate text-xs font-extrabold text-slate-800">
+        {value}
+      </p>
+    </div>
+  );
+}

@@ -7,11 +7,29 @@ import {
   BadgeCheck,
   Building2,
   CalendarClock,
+  CalendarCheck2,
+  CircleDollarSign,
   Clock3,
+  Crown,
+  Factory,
+  FileSignature,
+  MailWarning,
   Megaphone,
+  Microscope,
   RefreshCw,
+  ScrollText,
   ShieldCheck,
+  SlidersHorizontal,
   Tags,
+  UserCog,
+  Users,
+  Bell,
+  BookOpenText,
+  Bird,
+  Home,
+  Landmark,
+  TrendingUp,
+  Truck,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -26,6 +44,7 @@ type DashboardStats = {
   pendingExpertRequests: number
   activeListings: number
   pendingAppointments: number
+  pendingPurchaseRequests: number
 }
 
 type DashboardCard = {
@@ -35,6 +54,36 @@ type DashboardCard = {
   icon: typeof Building2
   className: string
 }
+
+type ManagementModule = {
+  label: string
+  description: string
+  href: string
+  icon: typeof Building2
+  roles: string[]
+  count?: (stats: DashboardStats) => number
+}
+
+const ALL_STAFF = ['super_admin', 'moderator', 'finance', 'operations', 'auditor']
+const MANAGEMENT_MODULES: ManagementModule[] = [
+  { label: 'Firmalar', description: 'Firma başvuruları ve doğrulama durumları', href: '/admin/firmalar', icon: Building2, roles: ['super_admin', 'moderator'], count: (s) => s.pendingCompanies },
+  { label: 'Faaliyetler', description: 'Faaliyet yetkileri ve belge başvuruları', href: '/admin/faaliyetler', icon: BadgeCheck, roles: ['super_admin', 'moderator'], count: (s) => s.pendingActivities },
+  { label: 'İlanlar', description: 'Tüm ilanlar ve moderasyon işlemleri', href: '/admin/ilanlar', icon: Megaphone, roles: ['super_admin', 'moderator'], count: (s) => s.pendingListings },
+  { label: 'Öne Çıkarma', description: 'Vitrin ve ilan promosyon talepleri', href: '/admin/ilan-promosyonlari', icon: Crown, roles: ['super_admin', 'moderator', 'finance'] },
+  { label: 'İlan Kuralları', description: 'Otomatik moderasyon ve risk eşikleri', href: '/admin/ilan-kurallari', icon: SlidersHorizontal, roles: ['super_admin', 'moderator'] },
+  { label: 'Teklifler', description: 'Ticari teklifler ve komisyon denetimi', href: '/admin/teklifler', icon: Tags, roles: ['super_admin', 'moderator', 'finance'], count: (s) => s.pendingOffers },
+  { label: 'Finans ve Ödemeler', description: 'Ödeme havuzu, satıcı alacağı ve komisyonlar', href: '/admin/finans', icon: CircleDollarSign, roles: ['super_admin', 'finance'] },
+  { label: 'Randevular', description: 'Kesimhane randevu başvuruları', href: '/admin/randevular', icon: CalendarCheck2, roles: ['super_admin', 'operations'], count: (s) => s.pendingAppointments },
+  { label: 'Ekspertiz Talepleri', description: 'Ekspertiz başvuruları ve atamalar', href: '/admin/ekspertiz', icon: Microscope, roles: ['super_admin', 'operations'], count: (s) => s.pendingExpertRequests },
+  { label: 'Kullanıcılar', description: 'Kullanıcı hesapları ve ayrıntıları', href: '/admin/kullanicilar', icon: Users, roles: ['super_admin', 'moderator'] },
+  { label: 'Yönetim Personeli', description: 'Platform rolleri ve erişim yetkileri', href: '/admin/personel', icon: UserCog, roles: ['super_admin'] },
+  { label: 'Sözleşmeler', description: 'Sözleşmeli üretim başvuruları', href: '/admin/sozlesmeler', icon: FileSignature, roles: ['super_admin', 'operations'] },
+  { label: 'Kesimhaneler', description: 'Tesis başvuruları ve yayın durumları', href: '/admin/kesimhaneler', icon: Factory, roles: ['super_admin', 'operations'] },
+  { label: 'Kesimhane Alımları', description: 'Toplu alım, teslim tutanağı, kanıt ve ödeme denetimi', href: '/admin/kesimhane-alimlari', icon: Truck, roles: ['super_admin', 'operations', 'finance'], count: (s) => s.pendingPurchaseRequests },
+  { label: 'Bildirimler', description: 'Platform ve şirket bildirimleri', href: '/admin/bildirimler', icon: Bell, roles: ['super_admin'] },
+  { label: 'E-posta Kuyruğu', description: 'Gönderim durumu ve teslimat hataları', href: '/admin/eposta-kuyrugu', icon: MailWarning, roles: ['super_admin', 'operations'] },
+  { label: 'Hareket Kayıtları', description: 'Platform genelindeki denetim günlüğü', href: '/admin/hareket-kayitlari', icon: ScrollText, roles: ALL_STAFF },
+]
 
 const INITIAL_STATS: DashboardStats = {
   totalCompanies: 0,
@@ -47,6 +96,7 @@ const INITIAL_STATS: DashboardStats = {
   pendingExpertRequests: 0,
   activeListings: 0,
   pendingAppointments: 0,
+  pendingPurchaseRequests: 0,
 }
 
 export default function AdminDashboardPage() {
@@ -54,6 +104,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [staffRole, setStaffRole] = useState<string | null>(null)
 
   const loadDashboard = useCallback(async () => {
     setLoading(true)
@@ -74,6 +125,7 @@ export default function AdminDashboardPage() {
       livestockResult,
       feedResult,
       appointmentsResult,
+      pendingPurchaseRequestsResult,
     ] = await Promise.all([
       supabase.from('companies').select('id', { count: 'exact', head: true }),
       supabase
@@ -128,6 +180,10 @@ export default function AdminDashboardPage() {
         .from('slaughter_appointments')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'Onay Bekliyor'),
+      supabase
+        .from('slaughterhouse_purchase_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'inceleme_bekliyor'),
     ])
 
     const firstError = [
@@ -145,6 +201,7 @@ export default function AdminDashboardPage() {
       livestockResult.error,
       feedResult.error,
       appointmentsResult.error,
+      pendingPurchaseRequestsResult.error,
     ].find(Boolean)
 
     if (firstError) {
@@ -170,6 +227,7 @@ export default function AdminDashboardPage() {
         (livestockResult.count ?? 0) +
         (feedResult.count ?? 0),
       pendingAppointments: appointmentsResult.count ?? 0,
+      pendingPurchaseRequests: pendingPurchaseRequestsResult.count ?? 0,
     })
 
     setLoading(false)
@@ -177,6 +235,9 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     void loadDashboard()
+    void supabase.rpc('get_my_platform_access').then(({ data }) => {
+      setStaffRole(data?.role ?? null)
+    })
   }, [loadDashboard])
 
   const cards: DashboardCard[] = [
@@ -207,6 +268,13 @@ export default function AdminDashboardPage() {
       href: '/admin/teklifler',
       icon: Tags,
       className: 'bg-cyan-100 text-cyan-700',
+    },
+    {
+      label: 'Bekleyen Kesimhane Alımı',
+      value: stats.pendingPurchaseRequests,
+      href: '/admin/kesimhane-alimlari',
+      icon: Truck,
+      className: 'bg-fuchsia-100 text-fuchsia-700',
     },
     {
       label: 'Onay Bekleyen Firma',
@@ -253,17 +321,20 @@ export default function AdminDashboardPage() {
   ]
 
   return (
-    <main className="min-h-screen p-6 md:p-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.08),_transparent_34%),linear-gradient(to_bottom,_#f8fafc,_#eef2ff)] p-5 md:p-10">
       <div className="mx-auto max-w-7xl space-y-8">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <header className="relative overflow-hidden rounded-[2rem] border border-slate-800 bg-[linear-gradient(135deg,#07111f_0%,#111c35_55%,#312e81_100%)] p-7 text-white shadow-2xl shadow-indigo-950/20 md:p-9">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-1/3 h-32 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-emerald-600">
-              Kanatlı Borsası
+            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-violet-200">
+              <Crown className="h-3.5 w-3.5" /> Kanatlı Borsası
             </p>
-            <h1 className="mt-1 text-3xl font-bold text-slate-900">
+            <h1 className="mt-5 text-3xl font-black tracking-tight text-white md:text-4xl">
               Yönetim Paneli
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
               Firma başvurularını, ilanları, teklifleri ve operasyonel
               talepleri tek merkezden yönetin.
             </p>
@@ -273,11 +344,12 @@ export default function AdminDashboardPage() {
             type="button"
             onClick={() => void loadDashboard()}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white shadow-lg backdrop-blur transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Yenile
           </button>
+          </div>
         </header>
 
         {errorMessage && (
@@ -286,12 +358,17 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {cards.map(({ label, value, href, icon: Icon, className }) => (
+        <section className="space-y-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-600">Öncelikli işler</p>
+            <h2 className="mt-1 text-xl font-extrabold text-slate-900">Bugün ilgilenmeniz gerekenler</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {cards.slice(0, 5).map(({ label, value, href, icon: Icon, className }) => (
             <Link
               key={label}
               href={href}
-              className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+              className="group relative overflow-hidden rounded-3xl border border-white/80 bg-white/90 p-5 shadow-[0_18px_45px_-28px_rgba(15,23,42,0.55)] ring-1 ring-slate-200/70 backdrop-blur transition-all hover:-translate-y-1 hover:shadow-[0_24px_55px_-25px_rgba(79,70,229,0.35)]"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -300,7 +377,7 @@ export default function AdminDashboardPage() {
                     {loading ? '—' : value}
                   </p>
                 </div>
-                <div className={`rounded-xl p-3 ${className}`}>
+                <div className={`rounded-2xl p-3 shadow-inner ${className}`}>
                   <Icon className="h-6 w-6" />
                 </div>
               </div>
@@ -310,49 +387,98 @@ export default function AdminDashboardPage() {
               </span>
             </Link>
           ))}
+          </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">Hızlı Yönetim</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Firma başvurularını, ilan kurallarını ve ticari işlemleri ilgili
-              yönetim ekranlarından inceleyin.
-            </p>
+        <section className="rounded-3xl border border-white/80 bg-white/90 p-6 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)] ring-1 ring-slate-200/70 backdrop-blur">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="font-extrabold text-slate-900">Sistem özeti</h2>
+            <p className="text-xs text-slate-500">Firma, ilan ve operasyonların genel durumu</p>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {cards.slice(5).map(({ label, value, href, icon: Icon, className }) => (
+              <Link key={label} href={href} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 transition hover:border-slate-300 hover:bg-white">
+                <span className={`rounded-lg p-2 ${className}`}><Icon className="h-4 w-4" /></span>
+                <span><span className="block text-lg font-black text-slate-900">{loading ? '—' : value}</span><span className="block text-[11px] leading-4 text-slate-500">{label}</span></span>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+        <section className="space-y-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-600">
+              Yönetim merkezi
+            </p>
+            <h2 className="mt-1 text-xl font-extrabold text-slate-900">
+              Yönetim modülleri
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Yetkiniz bulunan bütün yönetim ekranlarına buradan ulaşın.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {MANAGEMENT_MODULES.filter(
+              (module) => staffRole && module.roles.includes(staffRole),
+            ).map(({ label, description, href, icon: Icon, count }) => (
               <Link
-                href="/admin/firmalar"
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                key={href}
+                href={href}
+                className="group relative flex items-start gap-4 overflow-hidden rounded-3xl border border-white/80 bg-white/90 p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.6)] ring-1 ring-slate-200/70 transition hover:-translate-y-1 hover:ring-violet-300 hover:shadow-[0_24px_50px_-28px_rgba(109,40,217,0.45)]"
               >
-                Firmaları Yönet
-                <ArrowRight className="h-4 w-4" />
+                <span className="rounded-xl bg-violet-50 p-3 text-violet-700">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="font-bold text-slate-900">{label}</span>
+                    {count && !loading && count(stats) > 0 && (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-extrabold text-amber-800">
+                        {count(stats)} bekliyor
+                      </span>
+                    )}
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">
+                    {description}
+                  </span>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-violet-700">
+                    Modülü aç <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </span>
               </Link>
-              <Link
-                href="/admin/ilan-kurallari"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                İlan Kuralları
-              </Link>
-              <Link
-                href="/admin/kullanicilar"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                Kullanıcıları Yönet
-              </Link>
-              <Link
-                href="/admin/sozlesmeler"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                Sözleşmeleri Yönet
-              </Link>
-              <Link
-                href="/admin/kesimhaneler"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                Kesimhaneleri Yönet
-              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600">Site görünümü</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">Kullanıcıların gördüğü alanlar</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">Pazar ve hizmet sayfalarını yönetici görüntüleme modunda inceleyin.</p>
+              </div>
+              <Home className="h-6 w-6 text-emerald-600" />
             </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {[
+                { href: '/', label: 'Ana pazar vitrini', icon: Home, tone: 'bg-slate-100 text-slate-700' },
+                { href: '/borsa', label: 'Piyasa fiyatları', icon: TrendingUp, tone: 'bg-blue-100 text-blue-700' },
+                { href: '/livestock', label: 'Canlı hayvan pazarı', icon: Bird, tone: 'bg-amber-100 text-amber-700' },
+                { href: '/ekspertiz', label: 'Ekspertiz merkezi', icon: Microscope, tone: 'bg-teal-100 text-teal-700' },
+                { href: '/teknik-merkez', label: 'Teknik merkez', icon: BookOpenText, tone: 'bg-indigo-100 text-indigo-700' },
+                { href: '/sektor-konseyi', label: 'Sektör konseyi', icon: Landmark, tone: 'bg-violet-100 text-violet-700' },
+                { href: '/sozlesme-yonetimi', label: 'Sözleşmeli üretim', icon: FileSignature, tone: 'bg-cyan-100 text-cyan-700' },
+                { href: '/kesimhane', label: 'Kesimhane ağı', icon: Factory, tone: 'bg-rose-100 text-rose-700' },
+              ].map(({ href, label, icon: Icon, tone }) => (
+                <Link key={href} href={href} className="group flex items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-emerald-300 hover:bg-emerald-50/40">
+                  <span className={`rounded-lg p-2 ${tone}`}><Icon className="h-4 w-4" /></span>
+                  <span className="min-w-0 flex-1 text-sm font-bold text-slate-700">{label}</span>
+                  <ArrowRight className="h-4 w-4 text-slate-300 transition group-hover:text-emerald-600" />
+                </Link>
+              ))}
+            </div>
+            <p className="mt-4 rounded-xl bg-violet-50 px-4 py-3 text-xs leading-5 text-violet-800">Platform personeli bu sayfalarda içerikleri görüntüleyebilir; ilan, teklif ve ticari talep oluşturamaz.</p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -418,6 +544,18 @@ export default function AdminDashboardPage() {
                 </span>
                 <span className="rounded-full bg-violet-200 px-2.5 py-1 text-xs font-bold text-violet-900">
                   {loading ? '—' : stats.pendingAppointments}
+                </span>
+              </Link>
+
+              <Link
+                href="/admin/kesimhane-alimlari"
+                className="flex items-center justify-between rounded-xl bg-fuchsia-50 px-4 py-3 transition-colors hover:bg-fuchsia-100"
+              >
+                <span className="text-sm font-medium text-fuchsia-900">
+                  Yayın onayı bekleyen kesimhane alımları
+                </span>
+                <span className="rounded-full bg-fuchsia-200 px-2.5 py-1 text-xs font-bold text-fuchsia-900">
+                  {loading ? '—' : stats.pendingPurchaseRequests}
                 </span>
               </Link>
             </div>

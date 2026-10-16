@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface Slaughterhouse {
   id: string
@@ -291,6 +292,12 @@ export default function KesimhanePage() {
           </div>
           
           <div className="flex items-center gap-3">
+          <Link
+            href="/kesimhane/alim-merkezi"
+            className="rounded-xl bg-rose-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-800"
+          >
+            Toplu Hayvan Alım Merkezi
+          </Link>
           {user && (
             <button
               type="button"

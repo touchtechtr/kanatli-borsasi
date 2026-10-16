@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import MobileDrawer from "./MobileDrawer";
 import MobileHeader from "./MobileHeader";
@@ -12,6 +13,8 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith("/admin");
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -30,11 +33,15 @@ export default function AppShell({
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar />
-      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      {!isAdminRoute && <Sidebar />}
+      {!isAdminRoute && (
+        <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <MobileHeader onMenuClick={() => setDrawerOpen(true)} />
+        {!isAdminRoute && (
+          <MobileHeader onMenuClick={() => setDrawerOpen(true)} />
+        )}
         <TickerBar />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>

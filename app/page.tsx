@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  ShieldCheck,
   Sparkles,
   Star,
   TrendingUp,
@@ -136,6 +137,7 @@ function HomeContent() {
   const [marketPrices, setMarketPrices] = useState<MarketPrice[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [user, setUser] = useState<{ id: string } | null>(null);
+  const [isPlatformStaff, setIsPlatformStaff] = useState(false);
   const [userCompanyId, setUserCompanyId] = useState("");
 
   const [query, setQuery] = useState("");
@@ -147,6 +149,7 @@ function HomeContent() {
 
   const [showListingTypeModal, setShowListingTypeModal] = useState(false);
   const [showGeneralForm, setShowGeneralForm] = useState(false);
+  const [generalListingMode, setGeneralListingMode] = useState<"feed" | "agri">("feed");
   const [offerForm, setOfferForm] = useState<OfferForm | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [generalImageFiles, setGeneralImageFiles] = useState<File[]>([]);
@@ -367,11 +370,6 @@ function HomeContent() {
 
     const initialize = async () => {
       setMounted(true);
-      if (
-        new URLSearchParams(window.location.search).get("newListing") === "1"
-      ) {
-        setShowListingTypeModal(true);
-      }
       const {
         data: { user: currentUser },
       } = await supabase.auth.getUser();
@@ -380,16 +378,47 @@ function HomeContent() {
 
       if (currentUser) {
         setUser({ id: currentUser.id });
-        const { data: companyData } = await supabase
-          .from("companies")
-          .select("id, name, role, status")
-          .eq("user_id", currentUser.id)
-          .order("name");
+        const [{ data: companyData }, { data: platformAccess }] =
+          await Promise.all([
+            supabase
+              .from("companies")
+              .select("id, name, role, status")
+              .eq("user_id", currentUser.id)
+              .order("name"),
+            supabase.rpc("get_my_platform_access"),
+          ]);
 
         if (!active) return;
-        const ownCompanies = (companyData ?? []) as Company[];
+        const staff = Boolean(
+          platformAccess?.is_staff && platformAccess?.active,
+        );
+        setIsPlatformStaff(staff);
+        const ownCompanies = staff ? [] : ((companyData ?? []) as Company[]);
         setCompanies(ownCompanies);
         setUserCompanyId(ownCompanies[0]?.id ?? "");
+
+        if (
+          !staff &&
+          ["1", "general", "agri"].includes(
+            new URLSearchParams(window.location.search).get("newListing") ?? "",
+          )
+        ) {
+          const requested = new URLSearchParams(window.location.search).get("newListing");
+          if (requested === "general" || requested === "agri") {
+            const mode = requested === "agri" ? "agri" : "feed";
+            setGeneralListingMode(mode);
+            setNewListing((current) => ({
+              ...current,
+              category:
+                mode === "agri"
+                  ? "Gübre & Bitki Besleme"
+                  : "Broyler (Etlik) Yemleri",
+              unit: mode === "agri" ? "Adet / Paket" : "Ton / Çuval",
+            }));
+            setShowGeneralForm(true);
+          }
+          else setShowListingTypeModal(true);
+        }
       }
 
       await loadMarketplace();
@@ -479,6 +508,12 @@ function HomeContent() {
   };
 
   const openOffer = async (listing: UnifiedListing) => {
+    if (isPlatformStaff) {
+      alert(
+        "Platform personeli ticari teklif gönderemez. İşlem yapmak için ayrı bir şirket hesabı kullanın.",
+      );
+      return;
+    }
     if (!user) {
       router.push("/auth");
       return;
@@ -541,6 +576,7 @@ function HomeContent() {
 
   const submitOffer = async (event: FormEvent) => {
     event.preventDefault();
+    if (isPlatformStaff) return;
     if (!offerForm || !userCompanyId) return;
 
     const quantity = Number(offerForm.quantity);
@@ -580,6 +616,12 @@ function HomeContent() {
 
   const submitGeneralListing = async (event: FormEvent) => {
     event.preventDefault();
+    if (isPlatformStaff) {
+      alert(
+        "Platform personeli ilan oluşturamaz. İlan vermek için ayrı bir şirket hesabı kullanın.",
+      );
+      return;
+    }
     if (!user) return router.push("/auth");
 
     const company = companies.find((item) => item.id === userCompanyId);
@@ -661,15 +703,21 @@ function HomeContent() {
                 karşılaştırın; doğrulanmış firmalara güvenli teklif gönderin.
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    user ? setShowListingTypeModal(true) : router.push("/auth")
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400"
-                >
-                  <Plus className="h-4 w-4" /> Yeni İlan Ver
-                </button>
+                {isPlatformStaff ? (
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-2 rounded-xl bg-violet-100 px-5 py-3 text-sm font-bold text-violet-950 transition hover:bg-violet-200"
+                  >
+                    <ShieldCheck className="h-4 w-4" /> Yönetim Merkezine Dön
+                  </Link>
+                ) : (
+                  <Link
+                    href={user ? "/ilan/yeni" : "/auth?next=/ilan/yeni"}
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-emerald-400"
+                  >
+                    <Plus className="h-4 w-4" /> Yeni İlan Ver
+                  </Link>
+                )}
                 {!user && (
                   <Link
                     href="/auth"
@@ -812,6 +860,7 @@ function HomeContent() {
                   item={item}
                   onOffer={openOffer}
                   own={Boolean(user && item.companyId === userCompanyId)}
+                  staffReadOnly={isPlatformStaff}
                 />
               ))}
             </div>
@@ -877,6 +926,7 @@ function HomeContent() {
                     item={item}
                     onOffer={openOffer}
                     own={Boolean(user && item.companyId === userCompanyId)}
+                    staffReadOnly={isPlatformStaff}
                   />
                 ))}
               </div>
@@ -982,6 +1032,12 @@ function HomeContent() {
               type="button"
               onClick={() => {
                 setShowListingTypeModal(false);
+                setGeneralListingMode("feed");
+                setNewListing((current) => ({
+                  ...current,
+                  category: "Broyler (Etlik) Yemleri",
+                  unit: "Ton / Çuval",
+                }));
                 setShowGeneralForm(true);
               }}
               className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4 text-left hover:border-emerald-400"
@@ -1000,7 +1056,7 @@ function HomeContent() {
       {showGeneralForm && (
         <Modal
           onClose={() => setShowGeneralForm(false)}
-          title="Yeni ürün ilanı"
+          title={generalListingMode === "agri" ? "Yeni zirai girdi ilanı" : "Yeni yem ve hammadde ilanı"}
         >
           <form
             onSubmit={submitGeneralListing}
@@ -1036,10 +1092,22 @@ function HomeContent() {
                 }
                 className="input"
               >
-                <option>Broyler (Etlik) Yemleri</option>
-                <option>Yumurta Tavuğu Yemleri</option>
-                <option>Hammadde & Tahıllar</option>
-                <option>Katkı Maddeleri</option>
+                {generalListingMode === "agri" ? (
+                  <>
+                    <option>Gübre & Bitki Besleme</option>
+                    <option>Tohum & Fide</option>
+                    <option>Bitki Koruma Ürünleri</option>
+                    <option>Sulama & Tarım Ekipmanları</option>
+                    <option>Sera & Üretim Malzemeleri</option>
+                  </>
+                ) : (
+                  <>
+                    <option>Broyler (Etlik) Yemleri</option>
+                    <option>Yumurta Tavuğu Yemleri</option>
+                    <option>Hammadde & Tahıllar</option>
+                    <option>Katkı Maddeleri</option>
+                  </>
+                )}
               </select>
             </Field>
             <Field label="İlan başlığı" wide>
@@ -1261,10 +1329,12 @@ function FeaturedCard({
   item,
   onOffer,
   own,
+  staffReadOnly,
 }: {
   item: UnifiedListing;
   onOffer: (item: UnifiedListing) => void;
   own: boolean;
+  staffReadOnly: boolean;
 }) {
   return (
     <article className="relative overflow-hidden rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-5 shadow-md">
@@ -1304,7 +1374,7 @@ function FeaturedCard({
           />
           <Metric label="Birim fiyat" value={money(item.price)} accent />
         </div>
-        <CardActions item={item} onOffer={onOffer} own={own} />
+        <CardActions item={item} onOffer={onOffer} own={own} staffReadOnly={staffReadOnly} />
       </div>
     </article>
   );
@@ -1314,10 +1384,12 @@ function ListingRow({
   item,
   onOffer,
   own,
+  staffReadOnly,
 }: {
   item: UnifiedListing;
   onOffer: (item: UnifiedListing) => void;
   own: boolean;
+  staffReadOnly: boolean;
 }) {
   return (
     <article
@@ -1387,7 +1459,7 @@ function ListingRow({
         </div>
 
         <div className="mt-auto pt-4">
-          <CardActions item={item} onOffer={onOffer} own={own} />
+          <CardActions item={item} onOffer={onOffer} own={own} staffReadOnly={staffReadOnly} />
         </div>
       </div>
     </article>
@@ -1425,11 +1497,13 @@ function CardActions({
   item,
   onOffer,
   own,
+  staffReadOnly,
   compact = false,
 }: {
   item: UnifiedListing;
   onOffer: (item: UnifiedListing) => void;
   own: boolean;
+  staffReadOnly: boolean;
   compact?: boolean;
 }) {
   return (
@@ -1442,7 +1516,11 @@ function CardActions({
           Detay
         </Link>
       )}
-      {own ? (
+      {staffReadOnly ? (
+        <span className="inline-flex flex-1 items-center justify-center rounded-xl bg-violet-50 px-3 py-2.5 text-center text-xs font-bold text-violet-700">
+          Yönetici görüntüleme modu
+        </span>
+      ) : own ? (
         <span className="inline-flex flex-1 items-center justify-center rounded-xl bg-blue-50 px-3 py-2.5 text-center text-xs font-bold text-blue-700">
           Kendi ilanınız
         </span>
