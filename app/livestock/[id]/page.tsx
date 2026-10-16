@@ -20,6 +20,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getCompanyOperationAccess } from "@/lib/company-operation-access";
 
 type Listing = {
   id: string;
@@ -177,22 +178,14 @@ export default function LivestockDetailPage() {
         setBuyerCompany(company ?? null);
 
         if (company?.id) {
-          const { data: activityAllowed, error: activityError } =
-            await supabase.rpc("company_has_active_activity", {
-              p_company_id: company.id,
-              p_activity_code: "animal_buyer",
-            });
+          const operationAccess = await getCompanyOperationAccess(
+            supabase,
+            company.id,
+            "bid_livestock",
+          );
 
           if (!mounted) return;
-
-          if (activityError) {
-            console.error(
-              "Canlı hayvan alım faaliyeti kontrol edilemedi:",
-              activityError.message,
-            );
-          }
-
-          setHasBuyerActivity(Boolean(activityAllowed));
+          setHasBuyerActivity(operationAccess.allowed);
         } else {
           setHasBuyerActivity(false);
         }
