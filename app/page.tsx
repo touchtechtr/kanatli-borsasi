@@ -2,7 +2,7 @@
 
 import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -144,6 +144,7 @@ function money(value: number) {
 
 function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
 
   const [mounted, setMounted] = useState(false);
@@ -405,8 +406,6 @@ function HomeContent() {
 
     const initialize = async () => {
       setMounted(true);
-      const requestedMarket = new URLSearchParams(window.location.search).get("market");
-      if (["feed", "livestock", "agri", "other", "slaughterhouse"].includes(requestedMarket ?? "")) setMarketView(requestedMarket as MarketView);
       const {
         data: { user: currentUser },
       } = await supabase.auth.getUser();
@@ -467,6 +466,15 @@ function HomeContent() {
       active = false;
     };
   }, [supabase]);
+
+  useEffect(() => {
+    const requestedMarket = searchParams.get("market");
+    if (["feed", "livestock", "agri", "other", "slaughterhouse"].includes(requestedMarket ?? "")) {
+      setMarketView(requestedMarket as MarketView);
+    } else {
+      setMarketView("all");
+    }
+  }, [searchParams]);
 
   const categories = useMemo(
     () => [
@@ -953,7 +961,7 @@ function HomeContent() {
   
           )}
 
-        {featuredListings.length > 0 && (
+        {marketView === "all" && featuredListings.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-end justify-between gap-4">
               <div>
@@ -995,19 +1003,19 @@ function HomeContent() {
           {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-14 text-center text-sm text-slate-400">İlanlar yükleniyor…</div> : (
             <div className="space-y-10">
               {visibleMarketSections.includes("feed") && <MarketplaceSection title="Yem ve hammadde ilanları" description="Fabrika yemi, tahıl, katkı maddesi ve toptan yem ticareti ilanları." count={marketplaceSections.feed.length} href="/?market=feed#ilan-akisi" accent="amber">
-                {marketplaceSections.feed.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+                {(marketView === "feed" ? marketplaceSections.feed : marketplaceSections.feed.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
               {visibleMarketSections.includes("livestock") && <MarketplaceSection title="Canlı hayvan ilanları" description="Kanatlı, küçükbaş ve büyükbaş satış ilanlarını firma bilgileriyle inceleyin." count={marketplaceSections.livestock.length} href="/livestock" accent="blue">
-                {marketplaceSections.livestock.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+                {(marketView === "livestock" ? marketplaceSections.livestock : marketplaceSections.livestock.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
               {visibleMarketSections.includes("agri") && <MarketplaceSection title="Zirai girdi ve tarım malzemeleri" description="Gübre, tohum, fide, bitki koruma, sulama ve üretim ekipmanı ilanları." count={marketplaceSections.agri.length} href="/?market=agri#ilan-akisi" accent="emerald">
-                {marketplaceSections.agri.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+                {(marketView === "agri" ? marketplaceSections.agri : marketplaceSections.agri.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
               {visibleMarketSections.includes("slaughterhouse") && <MarketplaceSection title="Kesimhane toplu alım talepleri" description="Onaylı kesimhanelerin canlı hayvan tedariki için yayınladığı toplu alım talepleri." count={filteredPurchaseRequests.length} href="/kesimhane/alim-merkezi" accent="violet">
-                {filteredPurchaseRequests.slice(0, 6).map((item) => <PurchaseRequestCard key={item.id} item={item} />)}
+                {(marketView === "slaughterhouse" ? filteredPurchaseRequests : filteredPurchaseRequests.slice(0, 6)).map((item) => <PurchaseRequestCard key={item.id} item={item} />)}
               </MarketplaceSection>}
               {visibleMarketSections.includes("other") && <MarketplaceSection title="Diğer ticari ilanlar" description="Desteklenen diğer tarımsal ürün ve ticari fırsatlar." count={marketplaceSections.other.length} href="/?market=other#ilan-akisi" accent="slate">
-                {marketplaceSections.other.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+                {(marketView === "other" ? marketplaceSections.other : marketplaceSections.other.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
             </div>
           )}
