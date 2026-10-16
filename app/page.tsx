@@ -230,9 +230,8 @@ function HomeContent() {
         .eq("payment_status", "odendi")
         .gt("ends_at", new Date().toISOString()),
       supabase
-        .from("slaughterhouse_purchase_requests")
+        .from("public_slaughterhouse_purchase_requests")
         .select("id,title,animal_type,quantity_required,target_price,city,delivery_start,delivery_end,company_id,created_at")
-        .eq("status", "acik")
         .order("created_at", { ascending: false }),
     ]);
 
