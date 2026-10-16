@@ -83,7 +83,7 @@ begin
       raise exception 'Firma kendi talebine veya bağlantılı firmasına bağımsız ekspertiz hizmeti veremez.'
         using errcode='42501',detail='expert_company_conflict';
     end if;
-    if auth.uid() is not null then
+    if auth.uid() is not null and not public.is_platform_admin() then
       perform public.assert_company_operation_access(new.assigned_expert_company_id,'provide_expertise');
     elsif not public.company_has_any_active_activity(new.assigned_expert_company_id,array['expert_provider','veterinarian']) then
       raise exception 'Seçilen firmanın aktif ekspertiz veya veteriner faaliyeti bulunmuyor.';
