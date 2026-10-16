@@ -34,6 +34,7 @@ import { uploadListingImages } from "@/lib/listing-images";
 
 type ListingSource = "listings" | "feed_listings" | "livestock_listings";
 type OfferKind = "listing" | "feed" | "livestock";
+type MarketView = "all" | "feed" | "livestock" | "agri" | "other" | "slaughterhouse";
 
 type Company = {
   id: string;
@@ -85,6 +86,20 @@ type PromotionRow = {
   ends_at: string;
 };
 
+type SlaughterhouseRequest = {
+  id: string;
+  title: string;
+  animal_type: string;
+  quantity_required: number;
+  target_price: number | null;
+  city: string;
+  delivery_start: string;
+  delivery_end: string;
+  company_id: string;
+  company_name: string;
+  created_at: string;
+};
+
 type MarketPrice = {
   id: string;
   item_name: string;
@@ -103,6 +118,8 @@ type OfferForm = {
 
 const ALL = "Tümü";
 const PAGE_SIZE = 12;
+const FEED_CATEGORIES = ["Broyler (Etlik) Yemleri", "Yumurta Tavuğu Yemleri", "Hammadde & Tahıllar", "Katkı Maddeleri"];
+const AGRI_CATEGORIES = ["Gübre & Bitki Besleme", "Tohum & Fide", "Bitki Koruma Ürünleri", "Sulama & Tarım Ekipmanları", "Sera & Üretim Malzemeleri"];
 
 const TYPE_OPTIONS = [
   { value: ALL, label: "Tüm ilanlar" },
@@ -135,6 +152,8 @@ function HomeContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [listings, setListings] = useState<UnifiedListing[]>([]);
   const [marketPrices, setMarketPrices] = useState<MarketPrice[]>([]);
+  const [purchaseRequests, setPurchaseRequests] = useState<SlaughterhouseRequest[]>([]);
+  const [marketView, setMarketView] = useState<MarketView>("all");
   const [companies, setCompanies] = useState<Company[]>([]);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [isPlatformStaff, setIsPlatformStaff] = useState(false);
@@ -175,6 +194,7 @@ function HomeContent() {
       livestockResult,
       priceResult,
       promotionResult,
+      purchaseRequestResult,
     ] = await Promise.all([
       supabase
         .from("listings")
@@ -209,6 +229,11 @@ function HomeContent() {
         .eq("status", "aktif")
         .eq("payment_status", "odendi")
         .gt("ends_at", new Date().toISOString()),
+      supabase
+        .from("slaughterhouse_purchase_requests")
+        .select("id,title,animal_type,quantity_required,target_price,city,delivery_start,delivery_end,company_id,created_at")
+        .eq("status", "acik")
+        .order("created_at", { ascending: false }),
     ]);
 
     const listingErrors = [
@@ -281,7 +306,10 @@ function HomeContent() {
     ];
 
     const companyIds = [
-      ...new Set(rawListings.map((item) => item.company_id).filter(Boolean)),
+      ...new Set([
+        ...rawListings.map((item) => item.company_id),
+        ...(purchaseRequestResult.data ?? []).map((item) => item.company_id),
+      ].filter(Boolean)),
     ];
 
     const listingIds = rawListings.map((item) => item.id);
@@ -360,6 +388,13 @@ function HomeContent() {
     });
 
     setListings(unified);
+    setPurchaseRequests((purchaseRequestResult.data ?? []).map((item) => ({
+      ...item,
+      quantity_required: Number(item.quantity_required),
+      target_price: item.target_price == null ? null : Number(item.target_price),
+      company_name: companyMap.get(item.company_id)?.name || "Doğrulanmış kesimhane",
+    })) as SlaughterhouseRequest[]);
+    if (purchaseRequestResult.error) console.warn("Kesimhane alım talepleri yüklenemedi:", purchaseRequestResult.error.message);
     setMarketPrices((priceResult.data ?? []) as MarketPrice[]);
     setLoading(false);
     setRefreshing(false);
@@ -370,6 +405,8 @@ function HomeContent() {
 
     const initialize = async () => {
       setMounted(true);
+      const requestedMarket = new URLSearchParams(window.location.search).get("market");
+      if (["feed", "livestock", "agri", "other", "slaughterhouse"].includes(requestedMarket ?? "")) setMarketView(requestedMarket as MarketView);
       const {
         data: { user: currentUser },
       } = await supabase.auth.getUser();
@@ -488,6 +525,17 @@ function HomeContent() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [listings, query, typeFilter, categoryFilter, cityFilter, sortOrder]);
+
+
+  const marketplaceSections = useMemo(() => {
+    const feed = filteredListings.filter((item) => item.source === "feed_listings" || (item.source === "listings" && FEED_CATEGORIES.includes(item.category)));
+    const livestock = filteredListings.filter((item) => item.source === "livestock_listings");
+    const agri = filteredListings.filter((item) => item.source === "listings" && AGRI_CATEGORIES.includes(item.category));
+    const other = filteredListings.filter((item) => item.source === "listings" && !FEED_CATEGORIES.includes(item.category) && !AGRI_CATEGORIES.includes(item.category));
+    return { feed, livestock, agri, other };
+  }, [filteredListings]);
+
+  const visibleMarketSections: MarketView[] = marketView === "all" ? ["feed", "livestock", "agri", "slaughterhouse", "other"] : [marketView];
 
   const featuredListings = useMemo(
     () =>
@@ -867,85 +915,38 @@ function HomeContent() {
           </section>
         )}
 
-        <section id="ilan-akisi" className="scroll-mt-32 space-y-4">
+        <section id="ilan-akisi" className="scroll-mt-32 space-y-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">
-                Pazar vitrini
-              </p>
-              <h2 className="mt-1 text-2xl font-extrabold text-slate-900">
-                Güncel ilanlar
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {filteredListings.length} ilan bulundu
-              </p>
+            <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">Kategori vitrini</p>
+              <h2 className="mt-1 text-2xl font-extrabold text-slate-900">{marketView === "all" ? "Pazar bölümleri" : "Seçili pazar bölümü"}</h2>
+              <p className="mt-1 text-sm text-slate-500">Her bölümde en yeni 6 ilan gösterilir.</p></div>
+            <div className="flex gap-2">
+              {marketView !== "all" && <Link href="/#ilan-akisi" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700">Tüm bölümler</Link>}
+              <button type="button" onClick={() => void loadMarketplace(true)} disabled={refreshing} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Yenile</button>
             </div>
-            <button
-              type="button"
-              onClick={() => void loadMarketplace(true)}
-              disabled={refreshing}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              />{" "}
-              Yenile
-            </button>
           </div>
-
-          {errorMessage && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {errorMessage}
-            </div>
-          )}
-
-          <div>
-            {loading ? (
-              <div className="p-14 text-center text-sm text-slate-400">
-                İlanlar yükleniyor…
-              </div>
-            ) : filteredListings.length === 0 ? (
-              <div className="p-14 text-center">
-                <Package className="mx-auto h-10 w-10 text-slate-300" />
-                <h3 className="mt-3 font-bold text-slate-700">
-                  Uygun ilan bulunamadı
-                </h3>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="mt-3 text-sm font-semibold text-emerald-700 hover:underline"
-                >
-                  Filtreleri temizle
-                </button>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredListings.slice(0, visibleCount).map((item) => (
-                  <ListingRow
-                    key={item.key}
-                    item={item}
-                    onOffer={openOffer}
-                    own={Boolean(user && item.companyId === userCompanyId)}
-                    staffReadOnly={isPlatformStaff}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {visibleCount < filteredListings.length && (
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-bold text-slate-700 shadow-sm hover:border-emerald-400 hover:text-emerald-700"
-              >
-                Daha fazla ilan göster
-              </button>
+          {errorMessage && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{errorMessage}</div>}
+          {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-14 text-center text-sm text-slate-400">İlanlar yükleniyor…</div> : (
+            <div className="space-y-10">
+              {visibleMarketSections.includes("feed") && <MarketplaceSection title="Yem ve hammadde ilanları" description="Fabrika yemi, tahıl, katkı maddesi ve toptan yem ticareti ilanları." count={marketplaceSections.feed.length} href="/?market=feed#ilan-akisi" accent="amber">
+                {marketplaceSections.feed.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+              </MarketplaceSection>}
+              {visibleMarketSections.includes("livestock") && <MarketplaceSection title="Canlı hayvan ilanları" description="Kanatlı, küçükbaş ve büyükbaş satış ilanlarını firma bilgileriyle inceleyin." count={marketplaceSections.livestock.length} href="/livestock" accent="blue">
+                {marketplaceSections.livestock.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+              </MarketplaceSection>}
+              {visibleMarketSections.includes("agri") && <MarketplaceSection title="Zirai girdi ve tarım malzemeleri" description="Gübre, tohum, fide, bitki koruma, sulama ve üretim ekipmanı ilanları." count={marketplaceSections.agri.length} href="/?market=agri#ilan-akisi" accent="emerald">
+                {marketplaceSections.agri.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+              </MarketplaceSection>}
+              {visibleMarketSections.includes("slaughterhouse") && <MarketplaceSection title="Kesimhane toplu alım talepleri" description="Onaylı kesimhanelerin canlı hayvan tedariki için yayınladığı toplu alım talepleri." count={purchaseRequests.length} href="/kesimhane/alim-merkezi" accent="violet">
+                {purchaseRequests.slice(0, 6).map((item) => <PurchaseRequestCard key={item.id} item={item} />)}
+              </MarketplaceSection>}
+              {visibleMarketSections.includes("other") && <MarketplaceSection title="Diğer ticari ilanlar" description="Desteklenen diğer tarımsal ürün ve ticari fırsatlar." count={marketplaceSections.other.length} href="/?market=other#ilan-akisi" accent="slate">
+                {marketplaceSections.other.slice(0, 6).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
+              </MarketplaceSection>}
             </div>
           )}
         </section>
-
         <section className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -1264,6 +1265,41 @@ function HomeContent() {
   );
 }
 
+function MarketplaceSection({ title, description, count, href, accent, children }: {
+  title: string; description: string; count: number; href: string;
+  accent: "amber" | "blue" | "emerald" | "violet" | "slate"; children: React.ReactNode;
+}) {
+  const tones = {
+    amber: "from-amber-50 border-amber-200 text-amber-700", blue: "from-blue-50 border-blue-200 text-blue-700",
+    emerald: "from-emerald-50 border-emerald-200 text-emerald-700", violet: "from-violet-50 border-violet-200 text-violet-700",
+    slate: "from-slate-50 border-slate-200 text-slate-700",
+  };
+  return <section className={`rounded-3xl border bg-gradient-to-br ${tones[accent]} to-white p-5 md:p-6`}>
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div>
+      <div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-black text-slate-900">{title}</h3>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-extrabold shadow-sm">{count} ilan</span></div>
+      <p className="mt-1 max-w-3xl text-sm text-slate-600">{description}</p></div>
+      <Link href={href} className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-extrabold hover:underline">Tüm ilanları gör <ChevronRight className="h-4 w-4" /></Link>
+    </div>
+    {count ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{children}</div> : <div className="rounded-2xl border border-dashed border-current/20 bg-white/70 p-8 text-center text-sm text-slate-500">Bu bölümde henüz aktif ilan bulunmuyor.</div>}
+  </section>;
+}
+
+function PurchaseRequestCard({ item }: { item: SlaughterhouseRequest }) {
+  return <article className="flex min-h-full flex-col rounded-2xl border border-violet-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+    <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-extrabold text-violet-700">TOPLU ALIM</span>
+      <span className="text-xs text-slate-400">{new Date(item.created_at).toLocaleDateString("tr-TR")}</span></div>
+    <h4 className="mt-4 line-clamp-2 text-lg font-black text-slate-900">{item.title}</h4>
+    <div className="mt-3 space-y-1.5 text-xs text-slate-500">
+      <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" />{item.company_name}</span>
+      <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{item.city}</span>
+      <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{new Date(item.delivery_start).toLocaleDateString("tr-TR")} – {new Date(item.delivery_end).toLocaleDateString("tr-TR")}</span>
+    </div>
+    <div className="mt-4 grid grid-cols-2 gap-2"><Metric label="Talep" value={`${item.quantity_required.toLocaleString("tr-TR")} baş`} />
+      <Metric label="Hedef fiyat" value={item.target_price == null ? "Teklif usulü" : money(item.target_price)} accent /></div>
+    <Link href={`/kesimhane/alim-merkezi/${item.id}`} className="mt-auto pt-4"><span className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-violet-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-800">Talebi incele <ChevronRight className="h-4 w-4" /></span></Link>
+  </article>;
+}
 function HeroStat({
   label,
   value,
