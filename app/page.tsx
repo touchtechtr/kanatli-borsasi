@@ -1268,36 +1268,70 @@ function MarketplaceSection({ title, description, count, href, accent, children 
   title: string; description: string; count: number; href: string;
   accent: "amber" | "blue" | "emerald" | "violet" | "slate"; children: React.ReactNode;
 }) {
-  const tones = {
-    amber: "from-amber-50 border-amber-200 text-amber-700", blue: "from-blue-50 border-blue-200 text-blue-700",
-    emerald: "from-emerald-50 border-emerald-200 text-emerald-700", violet: "from-violet-50 border-violet-200 text-violet-700",
-    slate: "from-slate-50 border-slate-200 text-slate-700",
-  };
-  return <section className={`rounded-3xl border bg-gradient-to-br ${tones[accent]} to-white p-5 md:p-6`}>
-    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div>
-      <div className="flex flex-wrap items-center gap-2"><h3 className="text-xl font-black text-slate-900">{title}</h3>
-        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-extrabold shadow-sm">{count} ilan</span></div>
-      <p className="mt-1 max-w-3xl text-sm text-slate-600">{description}</p></div>
-      <Link href={href} className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-extrabold hover:underline">Tüm ilanları gör <ChevronRight className="h-4 w-4" /></Link>
-    </div>
-    {count ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{children}</div> : <div className="rounded-2xl border border-dashed border-current/20 bg-white/70 p-8 text-center text-sm text-slate-500">Bu bölümde henüz aktif ilan bulunmuyor.</div>}
-  </section>;
+  const styles = {
+    amber: { panel: "border-amber-200/80 from-amber-100 via-orange-50 to-white shadow-amber-100/70", icon: "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-amber-300/50", badge: "bg-amber-950 text-amber-50", link: "bg-amber-500 text-amber-950 hover:bg-amber-400", glow: "bg-amber-300", label: "YEM PAZARI", Icon: Package },
+    blue: { panel: "border-blue-200/80 from-blue-100 via-sky-50 to-white shadow-blue-100/70", icon: "bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-blue-300/50", badge: "bg-blue-950 text-blue-50", link: "bg-blue-600 text-white hover:bg-blue-500", glow: "bg-blue-300", label: "CANLI HAYVAN", Icon: Star },
+    emerald: { panel: "border-emerald-200/80 from-emerald-100 via-teal-50 to-white shadow-emerald-100/70", icon: "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-300/50", badge: "bg-emerald-950 text-emerald-50", link: "bg-emerald-600 text-white hover:bg-emerald-500", glow: "bg-emerald-300", label: "ZİRAİ GİRDİ", Icon: Sparkles },
+    violet: { panel: "border-violet-200/80 from-violet-100 via-fuchsia-50 to-white shadow-violet-100/70", icon: "bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-violet-300/50", badge: "bg-violet-950 text-violet-50", link: "bg-violet-700 text-white hover:bg-violet-600", glow: "bg-violet-300", label: "TOPLU ALIM", Icon: Building2 },
+    slate: { panel: "border-slate-300/80 from-slate-200 via-slate-50 to-white shadow-slate-200/70", icon: "bg-gradient-to-br from-slate-700 to-slate-950 text-white shadow-slate-400/40", badge: "bg-slate-950 text-white", link: "bg-slate-900 text-white hover:bg-slate-700", glow: "bg-slate-400", label: "DİĞER İLANLAR", Icon: BarChart3 },
+  } as const;
+  const style = styles[accent];
+  const Icon = style.Icon;
+  return (
+    <section className={`relative overflow-hidden rounded-[2rem] border bg-gradient-to-br p-5 shadow-xl md:p-7 ${style.panel}`}>
+      <div className={`pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full opacity-20 blur-3xl ${style.glow}`} />
+      <div className="relative mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-4">
+          <div className={`flex h-14 w-14 flex-none items-center justify-center rounded-2xl shadow-lg ${style.icon}`}><Icon className="h-7 w-7" /></div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black tracking-[0.16em] ${style.badge}`}>{style.label}</span>
+              <span className="rounded-full border border-white/80 bg-white/90 px-2.5 py-1 text-xs font-black text-slate-700 shadow-sm">{count} aktif ilan</span>
+            </div>
+            <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{title}</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{description}</p>
+          </div>
+        </div>
+        <Link href={href} className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-black shadow-lg transition hover:-translate-y-0.5 ${style.link}`}>
+          Tüm ilanları gör <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
+      <div className="relative">
+        {count ? <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{children}</div> : (
+          <div className="rounded-2xl border border-white/80 bg-white/70 p-10 text-center shadow-inner backdrop-blur">
+            <Package className="mx-auto h-9 w-9 text-slate-300" /><p className="mt-3 text-sm font-semibold text-slate-500">Bu bölümde henüz aktif ilan bulunmuyor.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 function PurchaseRequestCard({ item }: { item: SlaughterhouseRequest }) {
-  return <article className="flex min-h-full flex-col rounded-2xl border border-violet-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-    <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-extrabold text-violet-700">TOPLU ALIM</span>
-      <span className="text-xs text-slate-400">{new Date(item.created_at).toLocaleDateString("tr-TR")}</span></div>
-    <h4 className="mt-4 line-clamp-2 text-lg font-black text-slate-900">{item.title}</h4>
-    <div className="mt-3 space-y-1.5 text-xs text-slate-500">
-      <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" />{item.company_name}</span>
-      <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{item.city}</span>
-      <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{new Date(item.delivery_start).toLocaleDateString("tr-TR")} – {new Date(item.delivery_end).toLocaleDateString("tr-TR")}</span>
-    </div>
-    <div className="mt-4 grid grid-cols-2 gap-2"><Metric label="Talep" value={`${item.quantity_required.toLocaleString("tr-TR")} baş`} />
-      <Metric label="Hedef fiyat" value={item.target_price == null ? "Teklif usulü" : money(item.target_price)} accent /></div>
-    <Link href={`/kesimhane/alim-merkezi/${item.id}`} className="mt-auto pt-4"><span className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-violet-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-800">Talebi incele <ChevronRight className="h-4 w-4" /></span></Link>
-  </article>;
+  return (
+    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-[0_16px_40px_-24px_rgba(76,29,149,.55)] transition duration-300 hover:-translate-y-1.5 hover:border-violet-300 hover:shadow-[0_24px_55px_-24px_rgba(76,29,149,.65)]">
+      <div className="relative overflow-hidden bg-gradient-to-br from-violet-950 via-violet-800 to-fuchsia-700 p-5 text-white">
+        <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10" />
+        <div className="relative flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-black tracking-wider backdrop-blur"><Crown className="h-3 w-3 text-amber-300" /> ONAYLI TOPLU ALIM</span>
+          <span className="text-[11px] font-semibold text-violet-100">{new Date(item.created_at).toLocaleDateString("tr-TR")}</span>
+        </div>
+        <h4 className="relative mt-5 line-clamp-2 min-h-14 text-xl font-black leading-7">{item.title}</h4>
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <div className="space-y-2 text-xs font-medium text-slate-600">
+          <span className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-700"><Building2 className="h-3.5 w-3.5" /></span>{item.company_name}</span>
+          <span className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-700"><MapPin className="h-3.5 w-3.5" /></span>{item.city}</span>
+          <span className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-700"><CalendarDays className="h-3.5 w-3.5" /></span>{new Date(item.delivery_start).toLocaleDateString("tr-TR")} – {new Date(item.delivery_end).toLocaleDateString("tr-TR")}</span>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Talep miktarı</p><p className="mt-1 text-base font-black text-slate-900">{item.quantity_required.toLocaleString("tr-TR")} baş</p></div>
+          <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wider text-violet-500">Hedef fiyat</p><p className="mt-1 truncate text-base font-black text-violet-800">{item.target_price == null ? "Teklif usulü" : money(item.target_price)}</p></div>
+        </div>
+        <Link href={`/kesimhane/alim-merkezi/${item.id}`} className="mt-auto pt-5"><span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-700 px-4 py-3 text-xs font-black text-white shadow-lg shadow-violet-200 transition group-hover:from-violet-600 group-hover:to-fuchsia-600">Talebi incele <ChevronRight className="h-4 w-4" /></span></Link>
+      </div>
+    </article>
+  );
 }
 function HeroStat({
   label,
@@ -1428,17 +1462,17 @@ function ListingRow({
 }) {
   return (
     <article
-      className={`group relative flex min-h-full flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl ${item.isHighlighted ? "border-amber-300 ring-2 ring-amber-200" : "border-slate-200"}`}
+      className={`group relative flex min-h-full flex-col overflow-hidden rounded-3xl border bg-white shadow-[0_16px_40px_-28px_rgba(15,23,42,.5)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_55px_-28px_rgba(15,23,42,.65)] ${item.isHighlighted ? "border-amber-300 ring-2 ring-amber-200" : "border-white/80"}`}
     >
       <div className="relative overflow-hidden bg-slate-100">
         {item.imageUrl ? (
           <img
             src={item.imageUrl}
             alt={item.title}
-            className="aspect-[16/10] w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+            className="aspect-[16/10] w-full object-cover transition duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="flex aspect-[16/10] items-center justify-center bg-gradient-to-br from-slate-100 via-white to-emerald-50">
+          <div className="flex aspect-[16/10] items-center justify-center bg-gradient-to-br from-slate-100 via-white to-emerald-100">
             <Package className="h-10 w-10 text-slate-300" />
           </div>
         )}
@@ -1455,7 +1489,7 @@ function ListingRow({
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-5">
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs font-bold text-emerald-700">{item.category}</p>
           <BadgeCheck
