@@ -31,6 +31,7 @@ import { createClient } from "@/lib/supabase/client";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 import ListingImagePicker from "@/components/listings/ListingImagePicker";
 import { uploadListingImages } from "@/lib/listing-images";
+import { activityApplicationHref, getCompanyOperationAccess } from "@/lib/company-operation-access";
 
 type ListingSource = "listings" | "feed_listings" | "livestock_listings";
 type OfferKind = "listing" | "feed" | "livestock";
@@ -629,33 +630,19 @@ function HomeContent() {
       return;
     }
 
-    const requiredActivities =
-      listing.offerKind === "livestock"
-        ? ["animal_buyer"]
-        : listing.offerKind === "feed"
-          ? ["feed_buyer", "animal_buyer"]
-          : ["animal_buyer", "feed_buyer"];
-
-    const { data: activityAllowed, error: activityError } = await supabase.rpc(
-      "company_has_any_active_activity",
-      {
-        p_company_id: buyer.id,
-        p_activity_codes: requiredActivities,
-      },
+    const offerOperation =
+      listing.offerKind === "livestock" ? "bid_livestock" : "bid_feed";
+    const operationAccess = await getCompanyOperationAccess(
+      supabase,
+      buyer.id,
+      offerOperation,
     );
 
-    if (activityError) {
-      alert("Faaliyet yetkiniz kontrol edilemedi: " + activityError.message);
-      return;
-    }
-
-    if (!activityAllowed) {
-      alert(
-        listing.offerKind === "livestock"
-          ? "Canlı hayvan ilanına teklif vermek için onaylı Canlı Hayvan Alıcısı / Tüccarı faaliyetiniz bulunmalıdır."
-          : "Bu ilana teklif vermek için uygun ve onaylı bir alım faaliyetiniz bulunmalıdır.",
-      );
-      router.push("/profil/faaliyetler");
+    if (!operationAccess.allowed) {
+      alert(operationAccess.message);
+      if (operationAccess.code === "activity_required") {
+        router.push(activityApplicationHref(operationAccess));
+      }
       return;
     }
 
@@ -720,6 +707,23 @@ function HomeContent() {
     const company = companies.find((item) => item.id === userCompanyId);
     if (!company || company.status !== "onaylandi") {
       alert("İlan oluşturmak için onaylı bir firma gereklidir.");
+      return;
+    }
+
+    const listingOperation =
+      generalListingMode === "agri"
+        ? "create_agri_listing"
+        : "create_general_listing";
+    const operationAccess = await getCompanyOperationAccess(
+      supabase,
+      company.id,
+      listingOperation,
+    );
+    if (!operationAccess.allowed) {
+      alert(operationAccess.message);
+      if (operationAccess.code === "activity_required") {
+        router.push(activityApplicationHref(operationAccess));
+      }
       return;
     }
 
