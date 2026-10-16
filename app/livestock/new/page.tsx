@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 import ListingImagePicker from "@/components/listings/ListingImagePicker";
 import { uploadListingImages } from "@/lib/listing-images";
+import { getCompanyOperationAccess } from "@/lib/company-operation-access";
 
 type FormData = {
   title: string;
@@ -214,6 +215,18 @@ export default function NewLivestockPage() {
           : "İlan verebilmek için firmanızın yönetici tarafından onaylanması gerekir.",
       );
       router.push("/profil/sirket");
+      return;
+    }
+
+    const operationAccess = await getCompanyOperationAccess(
+      supabase,
+      company.id,
+      "create_livestock_listing",
+    );
+    if (!operationAccess.allowed) {
+      setLoading(false);
+      setActivityRequired(operationAccess.code === "activity_required");
+      setErrorMessage(operationAccess.message);
       return;
     }
 
