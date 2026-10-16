@@ -122,10 +122,9 @@ export default function AdminFinancePage() {
     else setTradeRows((tradeResult.data ?? []) as unknown as TradePayment[])
 
     if (slaughterhouseResult.error) {
+      const slaughterhouseError = slaughterhouseResult.error.message
       setError((current) =>
-        current
-          ? current + ' · ' + slaughterhouseResult.error.message
-          : slaughterhouseResult.error.message,
+        current ? current + ' · ' + slaughterhouseError : slaughterhouseError,
       )
     } else {
       setSlaughterhouseRows(
