@@ -116,4 +116,14 @@ $$;
 revoke all on function public.admin_resolve_slaughterhouse_dispute(uuid,text,text) from public,anon;
 grant execute on function public.admin_resolve_slaughterhouse_dispute(uuid,text,text) to authenticated;
 
+create or replace view public.public_slaughterhouse_purchase_requests
+with (security_invoker=false)
+as
+select id,title,animal_type,quantity_required,target_price,city,delivery_start,delivery_end,company_id,created_at
+from public.slaughterhouse_purchase_requests
+where status='acik';
+
+revoke all on public.public_slaughterhouse_purchase_requests from public;
+grant select on public.public_slaughterhouse_purchase_requests to anon,authenticated;
+
 commit;
