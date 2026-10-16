@@ -4,6 +4,7 @@ export type CompanyOperation =
   | "create_livestock_listing"
   | "create_feed_listing"
   | "create_agri_listing"
+  | "create_general_listing"
   | "bid_livestock"
   | "bid_feed"
   | "provide_expertise"
