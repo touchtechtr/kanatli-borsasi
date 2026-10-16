@@ -160,6 +160,7 @@ function HomeContent() {
   const [userCompanyId, setUserCompanyId] = useState("");
 
   const [query, setQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [typeFilter, setTypeFilter] = useState(ALL);
   const [categoryFilter, setCategoryFilter] = useState(ALL);
   const [cityFilter, setCityFilter] = useState(ALL);
@@ -545,6 +546,15 @@ function HomeContent() {
     [listings],
   );
 
+  const openSearch = () => {
+    setShowSearch(true);
+    window.setTimeout(() => document.getElementById("ilan-arama")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
+
+  const closeSearch = () => {
+    setShowSearch(false);
+  };
+
   const resetFilters = () => {
     setQuery("");
     setTypeFilter(ALL);
@@ -773,6 +783,13 @@ function HomeContent() {
                     <LogIn className="h-4 w-4" /> Giriş Yap
                   </Link>
                 )}
+                <button
+                  type="button"
+                  onClick={openSearch}
+                  className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/50 bg-gradient-to-r from-cyan-400 to-emerald-400 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-950/20 transition hover:-translate-y-0.5 hover:from-cyan-300 hover:to-emerald-300"
+                >
+                  <Search className="h-4 w-4" /> İlan Ara ve Filtrele
+                </button>
                 <Link
                   href="/borsa"
                   className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold transition hover:bg-white/15"
@@ -823,69 +840,73 @@ function HomeContent() {
           </div>
         </section>
 
-        <section className="sticky top-2 z-20 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-200/40 backdrop-blur md:p-5">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-            <input
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setVisibleCount(PAGE_SIZE);
-              }}
-              placeholder="İlan, ürün, firma, şehir veya ırk ara..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-            />
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
-            <FilterSelect
-              value={typeFilter}
-              onChange={(value) => {
-                setTypeFilter(value);
-                setVisibleCount(PAGE_SIZE);
-              }}
-              options={TYPE_OPTIONS}
-            />
-            <FilterSelect
-              value={categoryFilter}
-              onChange={(value) => {
-                setCategoryFilter(value);
-                setVisibleCount(PAGE_SIZE);
-              }}
-              options={categories.map((value) => ({
-                value,
-                label: value === ALL ? "Tüm kategoriler" : value,
-              }))}
-            />
-            <FilterSelect
-              value={cityFilter}
-              onChange={(value) => {
-                setCityFilter(value);
-                setVisibleCount(PAGE_SIZE);
-              }}
-              options={cities.map((value) => ({
-                value,
-                label: value === ALL ? "Tüm şehirler" : value,
-              }))}
-            />
-            <FilterSelect
-              value={sortOrder}
-              onChange={setSortOrder}
-              options={[
-                { value: "recommended", label: "Önerilen sıralama" },
-                { value: "newest", label: "En yeni ilanlar" },
-                { value: "price_asc", label: "Fiyat: düşükten yükseğe" },
-                { value: "price_desc", label: "Fiyat: yüksekten düşüğe" },
-              ]}
-            />
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              Temizle
-            </button>
-          </div>
-        </section>
+        {showSearch && (
+          <section id="ilan-arama" className="scroll-mt-8 rounded-3xl border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-4 shadow-xl shadow-cyan-100/60 md:p-6">
+            <div className="mb-4 flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">Akıllı pazar araması</p><h2 className="mt-1 text-xl font-black text-slate-900">Aradığınız ilana hızla ulaşın</h2><p className="mt-1 text-sm text-slate-500">Ürün, firma, şehir ve ilan türüne göre sonuçları daraltın.</p></div><button type="button" onClick={closeSearch} aria-label="Aramayı kapat" className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-900"><X className="h-5 w-5" /></button></div>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                placeholder="İlan, ürün, firma, şehir veya ırk ara..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+              />
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+              <FilterSelect
+                value={typeFilter}
+                onChange={(value) => {
+                  setTypeFilter(value);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                options={TYPE_OPTIONS}
+              />
+              <FilterSelect
+                value={categoryFilter}
+                onChange={(value) => {
+                  setCategoryFilter(value);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                options={categories.map((value) => ({
+                  value,
+                  label: value === ALL ? "Tüm kategoriler" : value,
+                }))}
+              />
+              <FilterSelect
+                value={cityFilter}
+                onChange={(value) => {
+                  setCityFilter(value);
+                  setVisibleCount(PAGE_SIZE);
+                }}
+                options={cities.map((value) => ({
+                  value,
+                  label: value === ALL ? "Tüm şehirler" : value,
+                }))}
+              />
+              <FilterSelect
+                value={sortOrder}
+                onChange={setSortOrder}
+                options={[
+                  { value: "recommended", label: "Önerilen sıralama" },
+                  { value: "newest", label: "En yeni ilanlar" },
+                  { value: "price_asc", label: "Fiyat: düşükten yükseğe" },
+                  { value: "price_desc", label: "Fiyat: yüksekten düşüğe" },
+                ]}
+              />
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Temizle
+              </button>
+            </div>
+          </section>
+  
+          )}
 
         {featuredListings.length > 0 && (
           <section className="space-y-4">
@@ -1269,16 +1290,16 @@ function MarketplaceSection({ title, description, count, href, accent, children 
   accent: "amber" | "blue" | "emerald" | "violet" | "slate"; children: React.ReactNode;
 }) {
   const styles = {
-    amber: { panel: "border-amber-200/80 from-amber-100 via-orange-50 to-white shadow-amber-100/70", icon: "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-amber-300/50", badge: "bg-amber-950 text-amber-50", link: "bg-amber-500 text-amber-950 hover:bg-amber-400", glow: "bg-amber-300", label: "YEM PAZARI", Icon: Package },
-    blue: { panel: "border-blue-200/80 from-blue-100 via-sky-50 to-white shadow-blue-100/70", icon: "bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-blue-300/50", badge: "bg-blue-950 text-blue-50", link: "bg-blue-600 text-white hover:bg-blue-500", glow: "bg-blue-300", label: "CANLI HAYVAN", Icon: Star },
-    emerald: { panel: "border-emerald-200/80 from-emerald-100 via-teal-50 to-white shadow-emerald-100/70", icon: "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-300/50", badge: "bg-emerald-950 text-emerald-50", link: "bg-emerald-600 text-white hover:bg-emerald-500", glow: "bg-emerald-300", label: "ZİRAİ GİRDİ", Icon: Sparkles },
-    violet: { panel: "border-violet-200/80 from-violet-100 via-fuchsia-50 to-white shadow-violet-100/70", icon: "bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-violet-300/50", badge: "bg-violet-950 text-violet-50", link: "bg-violet-700 text-white hover:bg-violet-600", glow: "bg-violet-300", label: "TOPLU ALIM", Icon: Building2 },
-    slate: { panel: "border-slate-300/80 from-slate-200 via-slate-50 to-white shadow-slate-200/70", icon: "bg-gradient-to-br from-slate-700 to-slate-950 text-white shadow-slate-400/40", badge: "bg-slate-950 text-white", link: "bg-slate-900 text-white hover:bg-slate-700", glow: "bg-slate-400", label: "DİĞER İLANLAR", Icon: BarChart3 },
+    amber: { panel: "border-amber-300 from-amber-200 via-orange-100 to-amber-50 shadow-amber-200/80", icon: "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-amber-300/50", badge: "bg-amber-950 text-amber-50", link: "bg-amber-500 text-amber-950 hover:bg-amber-400", glow: "bg-amber-300", label: "YEM PAZARI", Icon: Package },
+    blue: { panel: "border-blue-300 from-blue-200 via-sky-100 to-blue-50 shadow-blue-200/80", icon: "bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-blue-300/50", badge: "bg-blue-950 text-blue-50", link: "bg-blue-600 text-white hover:bg-blue-500", glow: "bg-blue-300", label: "CANLI HAYVAN", Icon: Star },
+    emerald: { panel: "border-emerald-300 from-emerald-200 via-teal-100 to-emerald-50 shadow-emerald-200/80", icon: "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-300/50", badge: "bg-emerald-950 text-emerald-50", link: "bg-emerald-600 text-white hover:bg-emerald-500", glow: "bg-emerald-300", label: "ZİRAİ GİRDİ", Icon: Sparkles },
+    violet: { panel: "border-violet-300 from-violet-200 via-fuchsia-100 to-violet-50 shadow-violet-200/80", icon: "bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-violet-300/50", badge: "bg-violet-950 text-violet-50", link: "bg-violet-700 text-white hover:bg-violet-600", glow: "bg-violet-300", label: "TOPLU ALIM", Icon: Building2 },
+    slate: { panel: "border-slate-400 from-slate-300 via-slate-100 to-slate-50 shadow-slate-300/70", icon: "bg-gradient-to-br from-slate-700 to-slate-950 text-white shadow-slate-400/40", badge: "bg-slate-950 text-white", link: "bg-slate-900 text-white hover:bg-slate-700", glow: "bg-slate-400", label: "DİĞER İLANLAR", Icon: BarChart3 },
   } as const;
   const style = styles[accent];
   const Icon = style.Icon;
   return (
-    <section className={`relative overflow-hidden rounded-[2rem] border bg-gradient-to-br p-5 shadow-xl md:p-7 ${style.panel}`}>
+    <section className={`relative overflow-hidden rounded-[2rem] border-2 bg-gradient-to-br p-5 shadow-2xl ring-1 ring-white/70 md:p-7 ${style.panel}`}>
       <div className={`pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full opacity-20 blur-3xl ${style.glow}`} />
       <div className="relative mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-4">
