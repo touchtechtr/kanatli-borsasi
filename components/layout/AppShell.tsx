@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import MobileDrawer from "./MobileDrawer";
 import MobileHeader from "./MobileHeader";
 import TickerBar from "./TickerBar";
+import FloatingQuickActions from "./FloatingQuickActions";
 
 export default function AppShell({
   children,
@@ -43,7 +44,8 @@ export default function AppShell({
           <MobileHeader onMenuClick={() => setDrawerOpen(true)} />
         )}
         <TickerBar />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main id="app-scroll-container" className="flex-1 overflow-y-auto p-6">{children}</main>
+        <FloatingQuickActions />
       </div>
     </div>
   );
