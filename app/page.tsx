@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
+  ArrowUp,
   BadgeCheck,
   BarChart3,
   BookOpenText,
@@ -1084,6 +1085,49 @@ function HomeContent() {
             </Link>
           </div>
         </section>
+      </div>
+
+      <div className="fixed bottom-5 right-4 z-40 flex flex-col gap-2 rounded-2xl border border-white/70 bg-white/55 p-2 shadow-[0_18px_55px_-18px_rgba(15,23,42,.45)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/45 sm:bottom-7 sm:right-7">
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Sayfanın başına dön"
+          className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/80 bg-slate-900/80 text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-900"
+        >
+          <ArrowUp className="h-5 w-5" />
+          <span className="pointer-events-none absolute right-14 whitespace-nowrap rounded-lg border border-white/60 bg-slate-950/85 px-3 py-1.5 text-xs font-bold text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100">Yukarı çık</span>
+        </button>
+
+        {isPlatformStaff ? (
+          <button
+            type="button"
+            onClick={() => alert("Platform personeli ilan oluşturamaz. İlan vermek için ayrı bir şirket hesabıyla giriş yapın.")}
+            aria-label="İlan ver"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-emerald-200/80 bg-emerald-500/85 text-white shadow-lg shadow-emerald-200/60 transition hover:-translate-y-0.5 hover:bg-emerald-500"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="pointer-events-none absolute right-14 whitespace-nowrap rounded-lg border border-emerald-200/60 bg-emerald-950/90 px-3 py-1.5 text-xs font-bold text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100">Şirket hesabıyla ilan ver</span>
+          </button>
+        ) : (
+          <Link
+            href={user ? "/ilan/yeni" : "/auth?next=/ilan/yeni"}
+            aria-label="İlan ver"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-emerald-200/80 bg-emerald-500/85 text-white shadow-lg shadow-emerald-200/60 transition hover:-translate-y-0.5 hover:bg-emerald-500"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="pointer-events-none absolute right-14 whitespace-nowrap rounded-lg border border-emerald-200/60 bg-emerald-950/90 px-3 py-1.5 text-xs font-bold text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100">İlan ver</span>
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={openSearch}
+          aria-label="İlan ara"
+          className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-200/80 bg-cyan-500/80 text-white shadow-lg shadow-cyan-200/60 transition hover:-translate-y-0.5 hover:bg-cyan-500"
+        >
+          <Search className="h-5 w-5" />
+          <span className="pointer-events-none absolute right-14 whitespace-nowrap rounded-lg border border-cyan-200/60 bg-cyan-950/90 px-3 py-1.5 text-xs font-bold text-white opacity-0 shadow-lg backdrop-blur transition group-hover:opacity-100">İlan ara ve filtrele</span>
+        </button>
       </div>
 
       {showListingTypeModal && (
