@@ -13,6 +13,9 @@ type WalletTransaction = {
   description: string
   status: 'pending' | 'posted' | 'cancelled'
   trade_offer_id: string | null
+  slaughterhouse_delivery_id: string | null
+  slaughterhouse_request_id: string | null
+  source: 'trade' | 'slaughterhouse' | 'manual'
   created_at: string
 }
 
@@ -27,6 +30,8 @@ type WalletData = {
   total_expense: number
   pending_income: number
   pending_expense: number
+  disputed_income: number
+  disputed_expense: number
   can_view_platform: boolean
   has_company: boolean
   transactions: WalletTransaction[]
@@ -99,7 +104,7 @@ export default function WalletPage() {
         <div>
           <p className="text-sm font-semibold text-emerald-600">Finans merkezi</p>
           <h1 className="mt-1 text-3xl font-bold text-slate-900">{wallet?.name ?? 'Cüzdan'}</h1>
-          <p className="mt-2 text-sm text-slate-500">Tamamlanan ticari tekliflerden oluşan gerçek hesap hareketleri.</p>
+          <p className="mt-2 text-sm text-slate-500">Ticari teklifler ve kesimhane alımlarından oluşan hesap hareketleri.</p>
         </div>
         <button type="button" onClick={() => void loadWallet()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
           <RefreshCw className="h-4 w-4" /> Yenile
@@ -116,12 +121,35 @@ export default function WalletPage() {
             <SummaryCard icon={ArrowUpRight} label={wallet.account_type === 'platform' ? 'Toplam çıkış' : 'Toplam alış harcaması'} value={money(wallet.total_expense)} tone="amber" />
           </section>
 
-          {wallet.account_type === 'company' && (wallet.pending_income > 0 || wallet.pending_expense > 0) && (
-            <section className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4"><p className="text-xs font-bold uppercase text-blue-600">Bekleyen satış alacağı</p><p className="mt-1 text-xl font-extrabold text-blue-900">{money(wallet.pending_income)}</p></div>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-bold uppercase text-amber-700">Bekleyen alış ödemesi</p><p className="mt-1 text-xl font-extrabold text-amber-900">{money(wallet.pending_expense)}</p></div>
+          {wallet.account_type === 'company' && (
+            wallet.pending_income > 0 ||
+            wallet.pending_expense > 0 ||
+            wallet.disputed_income > 0 ||
+            wallet.disputed_expense > 0
+          ) && (
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <StatusCard
+                label="Bekleyen satış alacağı"
+                value={money(wallet.pending_income)}
+                tone="blue"
+              />
+              <StatusCard
+                label="Bekleyen alış ödemesi"
+                value={money(wallet.pending_expense)}
+                tone="amber"
+              />
+              <StatusCard
+                label="Uyuşmazlıktaki alacak"
+                value={money(wallet.disputed_income)}
+                tone="red"
+              />
+              <StatusCard
+                label="Uyuşmazlıktaki ödeme"
+                value={money(wallet.disputed_expense)}
+                tone="red"
+              />
             </section>
-          )}
+          )
 
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -143,9 +171,59 @@ export default function WalletPage() {
                       <div className={`rounded-xl p-2.5 ${item.direction === 'credit' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                         {item.direction === 'credit' ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                       </div>
-                      <div><p className="font-semibold text-slate-900">{transactionLabels[item.type]}</p><p className="mt-0.5 text-sm text-slate-500">{item.description}</p><p className="mt-1 text-xs text-slate-400">{new Date(item.created_at).toLocaleString('tr-TR')}</p></div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-slate-900">
+                            {transactionLabels[item.type]}
+                          </p>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            item.source === 'slaughterhouse'
+                              ? 'bg-rose-100 text-rose-700'
+                              : item.source === 'trade'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {item.source === 'slaughterhouse'
+                              ? 'Kesimhane alımı'
+                              : item.source === 'trade'
+                                ? 'Ticari teklif'
+                                : 'Manuel hareket'}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-sm text-slate-500">{item.description}</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {new Date(item.created_at).toLocaleString('tr-TR')}
+                        </p>
+                      </div>
                     </div>
-                    <div className="sm:text-right"><p className={`text-lg font-bold ${item.direction === 'credit' ? 'text-emerald-700' : 'text-amber-700'}`}>{item.direction === 'credit' ? '+' : '−'} {money(item.amount)}</p>{item.trade_offer_id && <Link href={wallet.account_type === 'platform' ? `/admin/teklifler/${item.trade_offer_id}` : '/profil/islem-gecmisi'} className="text-xs font-semibold text-emerald-700 hover:underline">İşlemi görüntüle</Link>}</div>
+                    <div className="sm:text-right">
+                      <p className={`text-lg font-bold ${
+                        item.direction === 'credit'
+                          ? 'text-emerald-700'
+                          : 'text-amber-700'
+                      }`}>
+                        {item.direction === 'credit' ? '+' : '−'} {money(item.amount)}
+                      </p>
+                      {item.slaughterhouse_request_id ? (
+                        <Link
+                          href={'/kesimhane/alim-merkezi/' + item.slaughterhouse_request_id}
+                          className="text-xs font-semibold text-rose-700 hover:underline"
+                        >
+                          Teslimat dosyasını görüntüle
+                        </Link>
+                      ) : item.trade_offer_id ? (
+                        <Link
+                          href={
+                            wallet.account_type === 'platform'
+                              ? '/admin/teklifler/' + item.trade_offer_id
+                              : '/profil/islem-gecmisi'
+                          }
+                          className="text-xs font-semibold text-emerald-700 hover:underline"
+                        >
+                          İşlemi görüntüle
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -162,4 +240,27 @@ export default function WalletPage() {
 function SummaryCard({ icon: Icon, label, value, tone }: { icon: typeof Wallet; label: string; value: string; tone: 'emerald' | 'blue' | 'amber' }) {
   const colors = { emerald: 'bg-emerald-100 text-emerald-700', blue: 'bg-blue-100 text-blue-700', amber: 'bg-amber-100 text-amber-700' }
   return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className={`inline-flex rounded-xl p-2.5 ${colors[tone]}`}><Icon className="h-5 w-5" /></div><p className="mt-4 text-sm text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold text-slate-900">{value}</p></div>
+}
+
+
+function StatusCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: 'blue' | 'amber' | 'red'
+}) {
+  const colors = {
+    blue: 'border-blue-200 bg-blue-50 text-blue-900',
+    amber: 'border-amber-200 bg-amber-50 text-amber-900',
+    red: 'border-red-200 bg-red-50 text-red-900',
+  }
+  return (
+    <div className={'rounded-xl border p-4 ' + colors[tone]}>
+      <p className="text-xs font-bold uppercase opacity-70">{label}</p>
+      <p className="mt-1 text-xl font-extrabold">{value}</p>
+    </div>
+  )
 }
