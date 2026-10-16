@@ -207,10 +207,14 @@ export default function AdminPurchases() {
 
   const resolveDispute = async (
     delivery: Delivery,
-    action: "saticiya_aktar" | "aliciya_iade",
+    action: "saticiya_aktar" | "aliciya_iade" | "aliciya_iade_yeniden_yayinla",
   ) => {
     const decision =
-      action === "saticiya_aktar" ? "satıcıya aktarım" : "alıcıya iade";
+      action === "saticiya_aktar"
+        ? "satıcıya aktarım"
+        : action === "aliciya_iade_yeniden_yayinla"
+          ? "alıcıya iade ve talebi yeniden yayınlama"
+          : "alıcıya iade";
     const note = prompt(`${decision} kararının gerekçesini yazın:`)?.trim();
     if (!note) return;
     if (!confirm(`Uyuşmazlık dosyasında ${decision} kararı uygulanacak. Onaylıyor musunuz?`)) return;
@@ -231,7 +235,9 @@ export default function AdminPurchases() {
       setSuccess(
         action === "saticiya_aktar"
           ? "Uyuşmazlık satıcı lehine sonuçlandı ve ödeme cüzdanlara işlendi."
-          : "Uyuşmazlık alıcı lehine sonuçlandı; ödeme iade edildi.",
+          : action === "aliciya_iade_yeniden_yayinla"
+            ? "Ödeme alıcıya iade edildi ve alım talebi yeniden yayına açıldı."
+            : "Uyuşmazlık alıcı lehine sonuçlandı; ödeme iade edildi ve talep kapatıldı.",
       );
       await load();
     }
@@ -501,6 +507,13 @@ export default function AdminPurchases() {
                             className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-50"
                           >
                             Alıcıya iade et
+                          </button>
+                          <button
+                            disabled={busyId === delivery.id}
+                            onClick={() => void resolveDispute(delivery, "aliciya_iade_yeniden_yayinla")}
+                            className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-bold text-violet-700 disabled:opacity-50"
+                          >
+                            İade et ve talebi yeniden yayınla
                           </button>
                           <button
                             disabled={busyId === delivery.id}
