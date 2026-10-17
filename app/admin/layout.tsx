@@ -21,6 +21,7 @@ import {
   MailWarning,
   Menu,
   Microscope,
+  Palette,
   ScrollText,
   Settings2,
   ShieldCheck,
@@ -94,6 +95,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
       { label: "E-posta Kuyruğu", href: "/admin/eposta-kuyrugu", icon: MailWarning },
       { label: "Hareket Kayıtları", href: "/admin/hareket-kayitlari", icon: ScrollText },
       { label: "Sistem Sağlığı", href: "/admin/sistem-sagligi", icon: HeartPulse },
+      { label: "Tema Ayarları", href: "/admin/tema-ayarlari", icon: Palette },
     ],
   },
 ];
