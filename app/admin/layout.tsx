@@ -206,7 +206,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
         </header>
-        <div className="min-h-[calc(100vh-61px)]">{children}</div>
+        <div className="admin-vip-content min-h-[calc(100vh-61px)]">{children}</div>
       </div>
     </div>
   );
