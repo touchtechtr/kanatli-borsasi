@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
+import PlatformThemeProvider from "@/components/theme/PlatformThemeProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,7 +28,9 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className={`${inter.variable} ${jbMono.variable} font-sans`}>
-        <AppShell>{children}</AppShell>
+        <PlatformThemeProvider scope="marketplace">
+          <AppShell>{children}</AppShell>
+        </PlatformThemeProvider>
       </body>
     </html>
   );
