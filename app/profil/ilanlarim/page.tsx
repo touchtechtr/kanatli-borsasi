@@ -25,6 +25,10 @@ type OwnListing = {
   title: string;
   category: string;
   quantity: number;
+  initialQuantity: number;
+  reservedQuantity: number;
+  soldQuantity: number;
+  expiresAt: string | null;
   unit: string;
   price: number;
   city: string;
@@ -100,21 +104,21 @@ export default function MyListingsPage() {
         supabase
           .from("listings")
           .select(
-            "id, title, category, quantity, unit, price, city, status, moderation_status, risk_score, created_at",
+            "id, title, category, quantity, initial_quantity, reserved_quantity, sold_quantity, expires_at, unit, price, city, status, moderation_status, risk_score, created_at",
           )
           .in("company_id", companyIds)
           .order("created_at", { ascending: false }),
         supabase
           .from("feed_listings")
           .select(
-            "id, title, category, quantity, unit, price, city, status, moderation_status, risk_score, created_at",
+            "id, title, category, quantity, initial_quantity, reserved_quantity, sold_quantity, expires_at, unit, price, city, status, moderation_status, risk_score, created_at",
           )
           .in("company_id", companyIds)
           .order("created_at", { ascending: false }),
         supabase
           .from("livestock_listings")
           .select(
-            "id, title, category, quantity, unit, price, city, status, moderation_status, risk_score, created_at",
+            "id, title, category, quantity, initial_quantity, reserved_quantity, sold_quantity, expires_at, unit, price, city, status, moderation_status, risk_score, created_at",
           )
           .in("company_id", companyIds)
           .order("created_at", { ascending: false }),
@@ -162,6 +166,10 @@ export default function MyListingsPage() {
           title: String(row.title || "İlan"),
           category: String(row.category || "Diğer"),
           quantity: Number(row.quantity || 0),
+          initialQuantity: Number(row.initial_quantity || row.quantity || 0),
+          reservedQuantity: Number(row.reserved_quantity || 0),
+          soldQuantity: Number(row.sold_quantity || 0),
+          expiresAt: row.expires_at ? String(row.expires_at) : null,
           unit: String(
             row.unit || (type === "livestock_listings" ? "Baş" : "Birim"),
           ),
@@ -227,8 +235,8 @@ export default function MyListingsPage() {
     all: listings.length,
     active: listings.filter((item) => item.status === "aktif").length,
     pending: listings.filter((item) => item.status === "beklemede").length,
-    promoted: listings.filter((item) => item.promotionStatus === "aktif")
-      .length,
+    processing: listings.filter((item) => item.status === "islemde").length,
+    promoted: listings.filter((item) => item.promotionStatus === "aktif").length,
   };
 
   return (
@@ -261,10 +269,11 @@ export default function MyListingsPage() {
           </Link>
         </header>
 
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat label="Toplam ilan" value={counts.all} />
           <Stat label="Aktif" value={counts.active} />
           <Stat label="İncelemede" value={counts.pending} />
+          <Stat label="İşlemde" value={counts.processing} />
           <Stat label="Öne çıkarılmış" value={counts.promoted} accent />
         </section>
 
@@ -299,6 +308,9 @@ export default function MyListingsPage() {
               <option value="beklemede">Beklemede</option>
               <option value="pasif">Pasif</option>
               <option value="reddedildi">Reddedildi</option>
+              <option value="islemde">İşlemde</option>
+              <option value="tamamlandi">Tamamlandı</option>
+              <option value="suresi_doldu">Süresi doldu</option>
             </select>
           </div>
         </section>
@@ -363,8 +375,16 @@ export default function MyListingsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Metric
-                      label="Miktar"
+                      label="Kalan"
                       value={`${listing.quantity.toLocaleString("tr-TR")} ${listing.unit}`}
+                    />
+                    <Metric
+                      label="Rezerve"
+                      value={`${listing.reservedQuantity.toLocaleString("tr-TR")} ${listing.unit}`}
+                    />
+                    <Metric
+                      label="Satılan"
+                      value={`${listing.soldQuantity.toLocaleString("tr-TR")} ${listing.unit}`}
                     />
                     <Metric
                       label="Birim fiyat"
