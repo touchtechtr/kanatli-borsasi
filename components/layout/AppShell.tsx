@@ -7,6 +7,7 @@ import MobileDrawer from "./MobileDrawer";
 import MobileHeader from "./MobileHeader";
 import TickerBar from "./TickerBar";
 import FloatingQuickActions from "./FloatingQuickActions";
+import PasswordRecoveryGuard from "@/components/auth/PasswordRecoveryGuard";
 
 export default function AppShell({
   children,
@@ -34,6 +35,7 @@ export default function AppShell({
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
+      <PasswordRecoveryGuard />
       {!isAdminRoute && <Sidebar />}
       {!isAdminRoute && (
         <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
