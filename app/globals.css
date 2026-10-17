@@ -398,3 +398,43 @@
   .ui-surface-card--interactive { transition: none; }
   .ui-surface-card--interactive:hover { transform: none; }
 }
+
+
+/* Published theme variants */
+[data-card-style="flat"] .ui-surface-card,
+[data-card-style="flat"] .ui-metric-card { box-shadow: none; }
+
+[data-card-style="outlined"] .ui-surface-card,
+[data-card-style="outlined"] .ui-metric-card {
+  box-shadow: none;
+  border-width: 2px;
+}
+
+[data-card-style="glass"] .ui-surface-card,
+[data-card-style="glass"] .ui-metric-card {
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+
+[data-card-style="soft"] .ui-surface-card,
+[data-card-style="soft"] .ui-metric-card {
+  background: rgba(var(--ui-surface), .9);
+  box-shadow: 0 14px 35px -30px rgba(var(--ui-primary), .38);
+}
+
+[data-density="compact"] .ui-page-shell { padding-block: 1rem; }
+[data-density="compact"] .ui-surface-card { padding: 1rem; }
+[data-density="spacious"] .ui-page-shell { padding-block: 2.25rem; }
+[data-density="spacious"] .ui-surface-card { padding: 1.75rem; }
+
+[data-heading-font="manrope"] .ui-page-title,
+[data-heading-font="manrope"] .ui-section-title { font-family: Manrope, var(--font-inter), sans-serif; }
+
+[data-heading-font="jakarta"] .ui-page-title,
+[data-heading-font="jakarta"] .ui-section-title { font-family: "Plus Jakarta Sans", var(--font-inter), sans-serif; }
+
+[data-motion="off"] *,
+[data-motion="off"] *::before,
+[data-motion="off"] *::after { animation: none !important; transition: none !important; }
+
+[data-motion="reduced"] .ui-surface-card--interactive:hover { transform: none; }
