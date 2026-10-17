@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -93,7 +93,6 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
       { label: "Bildirimler", href: "/admin/bildirimler", icon: Bell },
       { label: "E-posta Kuyruğu", href: "/admin/eposta-kuyrugu", icon: MailWarning },
       { label: "Hareket Kayıtları", href: "/admin/hareket-kayitlari", icon: ScrollText },
-      { label: "Sistem Sağlığı", href: "/admin/sistem-sagligi", icon: HeartPulse },
     ],
   },
 ];
@@ -106,6 +105,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [access, setAccess] = useState<PlatformAccess | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const emailDispatchStarted = useRef(false);
 
   const canOpenPath = (href: string) => {
     if (access?.role === "super_admin") return true;
@@ -144,7 +144,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setIsAdmin(true);
       setAccess({ ...result, email: result.email ?? user.email ?? null, full_name: result.full_name ?? user.user_metadata?.full_name ?? null });
       setChecking(false);
-      void dispatchNotificationEmails(supabase);
+      if (!emailDispatchStarted.current) {
+        emailDispatchStarted.current = true;
+        void dispatchNotificationEmails(supabase);
+      }
     };
     void checkAccess();
     return () => { mounted = false; };
@@ -164,9 +167,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-        <Link href="/admin" className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-extrabold transition ${pathname === "/admin" ? "bg-violet-500 text-white shadow-lg shadow-violet-950/30" : "bg-white/10 text-violet-100 hover:bg-white/15"}`}>
-          <LayoutDashboard className="h-5 w-5" /><span className="flex-1">Yönetim Merkezi</span><ChevronRight className="h-4 w-4 opacity-70" />
-        </Link>
+        <div className="space-y-2">
+          <Link href="/admin" className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-extrabold transition ${pathname === "/admin" ? "bg-violet-500 text-white shadow-lg shadow-violet-950/30" : "bg-white/10 text-violet-100 hover:bg-white/15"}`}>
+            <LayoutDashboard className="h-5 w-5" /><span className="flex-1">Yönetim Merkezi</span><ChevronRight className="h-4 w-4 opacity-70" />
+          </Link>
+          <Link href="/admin/sistem-sagligi" className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-extrabold transition ${pathname.startsWith("/admin/sistem-sagligi") ? "bg-emerald-500 text-white shadow-lg shadow-emerald-950/30" : "bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/15 hover:bg-emerald-400/20"}`}>
+            <HeartPulse className="h-5 w-5" /><span className="flex-1">Sistem Sağlığı</span><span className={`h-2 w-2 rounded-full ${pathname.startsWith("/admin/sistem-sagligi") ? "bg-white" : "bg-emerald-400"}`} />
+          </Link>
+        </div>
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter((item) => canOpenPath(item.href));
           if (!items.length) return null;
@@ -206,7 +214,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
         </header>
-        <div className="admin-vip-content min-h-[calc(100vh-61px)]">{children}</div>
+        <main className="admin-vip-content min-h-[calc(100vh-61px)] bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.08),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">{children}</main>
       </div>
     </div>
   );
