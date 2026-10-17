@@ -93,6 +93,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
       { label: "Bildirimler", href: "/admin/bildirimler", icon: Bell },
       { label: "E-posta Kuyruğu", href: "/admin/eposta-kuyrugu", icon: MailWarning },
       { label: "Hareket Kayıtları", href: "/admin/hareket-kayitlari", icon: ScrollText },
+      { label: "Sistem Sağlığı", href: "/admin/sistem-sagligi", icon: HeartPulse },
     ],
   },
 ];
@@ -167,14 +168,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-        <div className="space-y-2">
-          <Link href="/admin" className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-extrabold transition ${pathname === "/admin" ? "bg-violet-500 text-white shadow-lg shadow-violet-950/30" : "bg-white/10 text-violet-100 hover:bg-white/15"}`}>
-            <LayoutDashboard className="h-5 w-5" /><span className="flex-1">Yönetim Merkezi</span><ChevronRight className="h-4 w-4 opacity-70" />
-          </Link>
-          <Link href="/admin/sistem-sagligi" className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-extrabold transition ${pathname.startsWith("/admin/sistem-sagligi") ? "bg-emerald-500 text-white shadow-lg shadow-emerald-950/30" : "bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/15 hover:bg-emerald-400/20"}`}>
-            <HeartPulse className="h-5 w-5" /><span className="flex-1">Sistem Sağlığı</span><span className={`h-2 w-2 rounded-full ${pathname.startsWith("/admin/sistem-sagligi") ? "bg-white" : "bg-emerald-400"}`} />
-          </Link>
-        </div>
+        <Link href="/admin" className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-extrabold transition ${pathname === "/admin" ? "bg-violet-500 text-white shadow-lg shadow-violet-950/30" : "bg-white/10 text-violet-100 hover:bg-white/15"}`}>
+          <LayoutDashboard className="h-5 w-5" /><span className="flex-1">Yönetim Merkezi</span><ChevronRight className="h-4 w-4 opacity-70" />
+        </Link>
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter((item) => canOpenPath(item.href));
           if (!items.length) return null;
@@ -196,7 +192,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="theme-admin min-h-screen bg-slate-50">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 lg:block">{sidebar}</aside>
       {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Menüyü kapat" onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" /><aside className="relative h-full w-[86%] max-w-80 shadow-2xl">{sidebar}<button onClick={() => setMobileOpen(false)} className="absolute right-3 top-3 rounded-xl bg-white/10 p-2 text-white"><X className="h-5 w-5" /></button></aside></div>}
 
