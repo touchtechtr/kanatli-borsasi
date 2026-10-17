@@ -97,7 +97,7 @@ export default function AdminSystemHealthPage(){
     <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="flex flex-col gap-2 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-black uppercase tracking-[.16em] text-violet-600">Otomatik kontroller</p><h2 className="mt-1 text-xl font-black text-slate-900">Kayıt bütünlüğü sonuçları</h2></div>
-        {data?.checked_at&&<p className="text-xs font-semibold text-slate-500">Son kontrol: {new Date(/[zZ]|[+-]\\d{2}:?\\d{2}$/.test(data.checked_at)?data.checked_at:data.checked_at+"Z").toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}</p>}
+        {data?.checked_at&&<p className="text-xs font-semibold text-slate-500">Son kontrol: {new Date(data.checked_at.endsWith("Z")||data.checked_at.includes("+",10)?data.checked_at:data.checked_at+"Z").toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}</p>}
       </div>
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {checks.map(check=><Link key={check.label} href={check.href} className={"group flex items-start gap-4 rounded-2xl border p-4 transition hover:-translate-y-0.5 "+(check.value?"border-amber-200 bg-amber-50/70 hover:border-amber-300":"border-emerald-100 bg-emerald-50/50 hover:border-emerald-200")}>
