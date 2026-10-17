@@ -114,13 +114,8 @@ export default function ResetPasswordPage() {
 
     window.sessionStorage.removeItem(RECOVERY_MARKER)
     await supabase.auth.signOut()
-    setMessage('Şifreniz başarıyla yenilendi. Yeni şifrenizle giriş yapabilirsiniz.')
-
-    setTimeout(() => {
-      router.replace('/auth')
-    }, 2000)
-
-    setLoading(false)
+    window.sessionStorage.removeItem(RECOVERY_MARKER)
+    window.location.replace('/auth?password-reset=success')
   }
 
   return (
