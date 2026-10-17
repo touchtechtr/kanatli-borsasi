@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function dispatchNotificationEmails(supabase: SupabaseClient) {
+const DISPATCH_COOLDOWN_MS = 15_000;
+let activeDispatch: Promise<void> | null = null;
+let lastDispatchAt = 0;
+
+async function runDispatch(supabase: SupabaseClient) {
   const send = (accessToken: string) =>
     fetch("/api/email/notifications/dispatch", {
       method: "POST",
@@ -33,4 +37,20 @@ export async function dispatchNotificationEmails(supabase: SupabaseClient) {
         response.statusText,
     );
   }
+}
+
+export function dispatchNotificationEmails(supabase: SupabaseClient) {
+  const now = Date.now();
+
+  if (activeDispatch) return activeDispatch;
+  if (now - lastDispatchAt < DISPATCH_COOLDOWN_MS) {
+    return Promise.resolve();
+  }
+
+  lastDispatchAt = now;
+  activeDispatch = runDispatch(supabase).finally(() => {
+    activeDispatch = null;
+  });
+
+  return activeDispatch;
 }
