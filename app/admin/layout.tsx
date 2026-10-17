@@ -14,6 +14,7 @@ import {
   Crown,
   ExternalLink,
   Factory,
+  HeartPulse,
   FileSignature,
   LayoutDashboard,
   LogOut,
@@ -92,6 +93,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
       { label: "Bildirimler", href: "/admin/bildirimler", icon: Bell },
       { label: "E-posta Kuyruğu", href: "/admin/eposta-kuyrugu", icon: MailWarning },
       { label: "Hareket Kayıtları", href: "/admin/hareket-kayitlari", icon: ScrollText },
+      { label: "Sistem Sağlığı", href: "/admin/sistem-sagligi", icon: HeartPulse },
     ],
   },
 ];
