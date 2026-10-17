@@ -37,7 +37,7 @@ const ROLE_PATHS: Record<string, string[]> = {
   moderator: ["/admin", "/admin/hareket-kayitlari", "/admin/firmalar", "/admin/faaliyetler", "/admin/ilanlar", "/admin/ilan-promosyonlari", "/admin/ilan-kurallari", "/admin/teklifler", "/admin/kullanicilar"],
   finance: ["/admin", "/admin/hareket-kayitlari", "/admin/finans", "/admin/teklifler", "/admin/ilan-promosyonlari", "/admin/kesimhane-alimlari"],
   operations: ["/admin", "/admin/hareket-kayitlari", "/admin/randevular", "/admin/ekspertiz", "/admin/sozlesmeler", "/admin/kesimhaneler", "/admin/kesimhane-alimlari", "/admin/eposta-kuyrugu"],
-  auditor: ["/admin", "/admin/hareket-kayitlari"],
+  auditor: ["/admin", "/admin/hareket-kayitlari", "/admin/sistem-sagligi"],
 };
 
 const ROLE_LABELS: Record<string, string> = {
