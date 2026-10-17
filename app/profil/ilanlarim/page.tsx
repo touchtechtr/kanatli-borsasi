@@ -447,17 +447,32 @@ function Stat({
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const labels: Record<string,string> = {
+    aktif: "Yayında",
+    pasif: "Yayında değil",
+    beklemede: "İnceleme bekliyor",
+    reddedildi: "Reddedildi",
+    islemde: "İşlemde",
+    satildi: "Satıldı",
+    tamamlandi: "Tamamlandı",
+    iptal: "İptal edildi",
+    suresi_doldu: "Süresi doldu",
+  };
   const style =
     status === "aktif"
       ? "bg-emerald-100 text-emerald-700"
       : status === "beklemede"
         ? "bg-amber-100 text-amber-700"
-        : status === "reddedildi"
-          ? "bg-red-100 text-red-700"
-          : "bg-slate-100 text-slate-600";
+        : status === "islemde"
+          ? "bg-blue-100 text-blue-700"
+          : status === "reddedildi" || status === "iptal"
+            ? "bg-red-100 text-red-700"
+            : status === "tamamlandi" || status === "satildi"
+              ? "bg-violet-100 text-violet-700"
+              : "bg-slate-100 text-slate-600";
   return (
     <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${style}`}>
-      {status}
+      {labels[status] || status}
     </span>
   );
 }
