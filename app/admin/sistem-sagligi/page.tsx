@@ -13,18 +13,38 @@ type HealthData = {
   email_queue: { pending:number; failed:number; permanently_failed:number };
   required_guards: Record<string,boolean>;
 };
+type LifecycleHealth={
+  checked_at:string;
+  active_with_no_remaining_quantity:number;
+  expired_but_active:number;
+  in_progress_without_accepted_offer:number;
+  accepted_offer_listing_not_in_progress:number;
+  completed_with_remaining_quantity:number;
+  invalid_quantity_balance:number;
+  multiple_accepted_offers:number;
+};
 type CheckRow={label:string;value:number;description:string;href:string};
 
 export default function AdminSystemHealthPage(){
   const supabase=useMemo(()=>createClient(),[]);
   const[data,setData]=useState<HealthData|null>(null);
+  const[lifecycle,setLifecycle]=useState<LifecycleHealth|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<string|null>(null);
 
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
-    const{data:result,error:loadError}=await supabase.rpc("admin_system_integrity_health");
-    if(loadError){setError(loadError.message);setData(null)}else setData(result as HealthData);
+    const[coreResult,lifecycleResult]=await Promise.all([
+      supabase.rpc("admin_system_integrity_health"),
+      supabase.rpc("admin_listing_lifecycle_health")
+    ]);
+    const loadError=coreResult.error||lifecycleResult.error;
+    if(loadError){
+      setError(loadError.message);setData(null);setLifecycle(null);
+    }else{
+      setData(coreResult.data as HealthData);
+      setLifecycle(lifecycleResult.data as LifecycleHealth);
+    }
     setLoading(false);
   },[supabase]);
   useEffect(()=>{void load()},[load]);
@@ -40,7 +60,16 @@ export default function AdminSystemHealthPage(){
     {label:"Eksik kesimhane cüzdan kaydı",value:data.slaughterhouse_finance.released_payments_without_complete_ledger,description:"Serbest bırakıldığı halde üçlü muhasebe kaydı eksik işlemler.",href:"/admin/finans"},
     {label:"Kesimhane tutar farkı",value:data.slaughterhouse_finance.amount_mismatches,description:"Kesimhane ödeme bileşenleri birbiriyle eşleşmeyen kayıtlar.",href:"/admin/finans"},
     {label:"Uyuşmazlıklı hazır ödeme",value:data.slaughterhouse_finance.ready_deliveries_with_dispute,description:"Uyuşmazlığı olduğu halde ödeme serbest bırakmaya hazır görünenler.",href:"/admin/kesimhane-alimlari"},
-    {label:"Kalıcı e-posta hatası",value:data.email_queue.permanently_failed,description:"Dört gönderim denemesinden sonra hâlâ başarısız olan e-postalar.",href:"/admin/eposta-kuyrugu"}
+    {label:"Kalıcı e-posta hatası",value:data.email_queue.permanently_failed,description:"Dört gönderim denemesinden sonra hâlâ başarısız olan e-postalar.",href:"/admin/eposta-kuyrugu"},
+    ...(lifecycle?[
+      {label:"Miktarı kalmayan aktif ilan",value:lifecycle.active_with_no_remaining_quantity,description:"Aktif göründüğü halde satılabilir miktarı kalmayan ilanlar.",href:"/admin/ilanlar"},
+      {label:"Süresi dolduğu halde aktif ilan",value:lifecycle.expired_but_active,description:"Yayın bitiş zamanı geçmiş ancak hâlâ aktif görünen ilanlar.",href:"/admin/ilanlar"},
+      {label:"Teklifsiz işlemde ilan",value:lifecycle.in_progress_without_accepted_offer,description:"İşlemde olup kabul edilmiş teklifi bulunmayan ilanlar.",href:"/admin/ilanlar"},
+      {label:"İşleme alınmamış kabul edilmiş teklif",value:lifecycle.accepted_offer_listing_not_in_progress,description:"Teklifi kabul edilmiş fakat ilan durumu işlemde olmayan kayıtlar.",href:"/admin/teklifler"},
+      {label:"Kalan miktarlı tamamlanmış ilan",value:lifecycle.completed_with_remaining_quantity,description:"Tamamlandığı halde satılabilir miktarı bulunan ilanlar.",href:"/admin/ilanlar"},
+      {label:"Geçersiz miktar dengesi",value:lifecycle.invalid_quantity_balance,description:"İlk, kalan, rezerve ve satılan miktarları uyuşmayan ilanlar.",href:"/admin/ilanlar"},
+      {label:"Birden fazla kabul edilmiş teklif",value:lifecycle.multiple_accepted_offers,description:"Aynı ilan için eş zamanlı kabul edilmiş birden fazla teklif.",href:"/admin/teklifler"}
+    ]:[])
   ]:[];
   const issueCount=checks.reduce((total,item)=>total+item.value,0);
   const guardCount=data?Object.values(data.required_guards).filter(Boolean).length:0;
@@ -68,7 +97,7 @@ export default function AdminSystemHealthPage(){
     <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
       <div className="flex flex-col gap-2 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-black uppercase tracking-[.16em] text-violet-600">Otomatik kontroller</p><h2 className="mt-1 text-xl font-black text-slate-900">Kayıt bütünlüğü sonuçları</h2></div>
-        {data?.checked_at&&<p className="text-xs font-semibold text-slate-500">Son kontrol: {new Date(data.checked_at).toLocaleString("tr-TR")}</p>}
+        {data?.checked_at&&<p className="text-xs font-semibold text-slate-500">Son kontrol: {new Date(data.checked_at).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}</p>}
       </div>
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         {checks.map(check=><Link key={check.label} href={check.href} className={"group flex items-start gap-4 rounded-2xl border p-4 transition hover:-translate-y-0.5 "+(check.value?"border-amber-200 bg-amber-50/70 hover:border-amber-300":"border-emerald-100 bg-emerald-50/50 hover:border-emerald-200")}>
