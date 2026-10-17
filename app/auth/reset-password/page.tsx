@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { RECOVERY_MARKER } from '@/components/auth/PasswordRecoveryGuard'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const [mode, setMode] = useState<'request' | 'update'>('request')
   const [email, setEmail] = useState('')
@@ -17,27 +18,47 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const checkRecoverySession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+    let mounted = true
 
-      if (session) {
+    const hasRecoveryIntent = () => {
+      const query = new URLSearchParams(window.location.search)
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      return (
+        query.get('recovery') === '1' ||
+        query.get('type') === 'recovery' ||
+        hash.get('type') === 'recovery' ||
+        window.sessionStorage.getItem(RECOVERY_MARKER) === '1'
+      )
+    }
+
+    const checkRecoverySession = async () => {
+      const recoveryIntent = hasRecoveryIntent()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!mounted) return
+
+      if (recoveryIntent && session) {
+        window.sessionStorage.setItem(RECOVERY_MARKER, '1')
         setMode('update')
+      } else {
+        setMode('request')
+        if (recoveryIntent && !session) {
+          setError('Şifre sıfırlama bağlantısı geçersiz veya süresi dolmuş. Lütfen yeni bağlantı isteyin.')
+        }
       }
     }
 
-    checkRecoverySession()
+    void checkRecoverySession()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
+        window.sessionStorage.setItem(RECOVERY_MARKER, '1')
+        setError(null)
         setMode('update')
       }
     })
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [supabase])
@@ -50,7 +71,7 @@ export default function ResetPasswordPage() {
 
     const { error: resetError } =
       await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/reset-password?recovery=1`,
       })
 
     if (resetError) {
@@ -91,11 +112,12 @@ export default function ResetPasswordPage() {
       return
     }
 
+    window.sessionStorage.removeItem(RECOVERY_MARKER)
     await supabase.auth.signOut()
-    setMessage('Şifreniz başarıyla yenilendi. Giriş sayfasına yönlendiriliyorsunuz.')
+    setMessage('Şifreniz başarıyla yenilendi. Yeni şifrenizle giriş yapabilirsiniz.')
 
     setTimeout(() => {
-      router.push('/auth')
+      router.replace('/auth')
     }, 2000)
 
     setLoading(false)
