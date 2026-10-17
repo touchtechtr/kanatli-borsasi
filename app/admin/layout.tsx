@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
+import PlatformThemeProvider from "@/components/theme/PlatformThemeProvider";
 
 const ROLE_PATHS: Record<string, string[]> = {
   moderator: ["/admin", "/admin/hareket-kayitlari", "/admin/firmalar", "/admin/faaliyetler", "/admin/ilanlar", "/admin/ilan-promosyonlari", "/admin/ilan-kurallari", "/admin/teklifler", "/admin/kullanicilar"],
@@ -194,7 +195,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 
   return (
-    <div className="theme-admin min-h-screen bg-slate-50">
+    <PlatformThemeProvider scope="admin">
+    <div className="min-h-screen bg-slate-50">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 lg:block">{sidebar}</aside>
       {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Menüyü kapat" onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" /><aside className="relative h-full w-[86%] max-w-80 shadow-2xl">{sidebar}<button onClick={() => setMobileOpen(false)} className="absolute right-3 top-3 rounded-xl bg-white/10 p-2 text-white"><X className="h-5 w-5" /></button></aside></div>}
 
@@ -215,5 +217,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="admin-vip-content min-h-[calc(100vh-61px)] bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.08),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#f1f5f9_100%)]">{children}</main>
       </div>
     </div>
+    </PlatformThemeProvider>
   );
 }
