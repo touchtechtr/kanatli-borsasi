@@ -14,6 +14,9 @@ type ListingRow = {
   company_name: string;
   city: string;
   quantity: number;
+  initial_quantity: number;
+  reserved_quantity: number;
+  sold_quantity: number;
   unit: string;
   price: number;
   status: string;
@@ -52,17 +55,17 @@ export default function AdminListingsPage() {
       supabase
         .from("listings")
         .select(
-          "id, company_id, title, city, quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
+          "id, company_id, title, city, quantity, initial_quantity, reserved_quantity, sold_quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
         ),
       supabase
         .from("feed_listings")
         .select(
-          "id, company_id, title, city, quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
+          "id, company_id, title, city, quantity, initial_quantity, reserved_quantity, sold_quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
         ),
       supabase
         .from("livestock_listings")
         .select(
-          "id, company_id, title, city, quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
+          "id, company_id, title, city, quantity, initial_quantity, reserved_quantity, sold_quantity, unit, price, status, moderation_status, risk_score, risk_flags, created_at",
         ),
     ]);
 
@@ -110,6 +113,9 @@ export default function AdminListingsPage() {
             : "Bilinmeyen firma",
           city: item.city ?? "—",
           quantity: Number(item.quantity),
+          initial_quantity: Number(item.initial_quantity ?? item.quantity ?? 0),
+          reserved_quantity: Number(item.reserved_quantity ?? 0),
+          sold_quantity: Number(item.sold_quantity ?? 0),
           price: Number(item.price),
           unit: item.unit ?? "—",
           status: item.status ?? "—",
@@ -344,10 +350,8 @@ export default function AdminListingsPage() {
                     </p>
                   </div>
                   <div className="text-sm">
-                    <p className="text-xs text-slate-400">Miktar</p>
-                    <b>
-                      {row.quantity.toLocaleString("tr-TR")} {row.unit}
-                    </b>
+                    <p className="text-xs text-slate-400">Kalan / Rezerve / Satılan</p>
+                    <b>{row.quantity.toLocaleString("tr-TR")} / {row.reserved_quantity.toLocaleString("tr-TR")} / {row.sold_quantity.toLocaleString("tr-TR")} {row.unit}</b>
                   </div>
                   <div className="text-sm">
                     <p className="text-xs text-slate-400">Birim fiyat</p>
