@@ -91,7 +91,7 @@ export default function NewRequest() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 p-5 md:p-8">
+    <main className="min-h-screen bg-slate-50 p-5 md:p-8 marketplace-page">
       <div className="mx-auto max-w-4xl space-y-6">
         <Link href="/kesimhane/alim-merkezi" className="inline-flex items-center gap-2 text-sm font-bold text-slate-600"><ArrowLeft className="h-4 w-4" /> Alım merkezine dön</Link>
         <header>
