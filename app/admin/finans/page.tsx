@@ -269,23 +269,41 @@ export default function AdminFinancePage() {
   }, [tab, tradeRows, slaughterhouseRows])
 
   const reviewTrade = async (row: TradePayment, action: string) => {
-    const reference =
-      action === 'odeme_onayla'
-        ? (prompt('Ödeme/dekont referansı (isteğe bağlı):') ?? '')
-        : null
-    const note =
-      prompt(
-        action === 'iade'
-          ? 'İade açıklaması:'
-          : 'Yönetim notu (isteğe bağlı):',
-      ) ?? ''
-    if (action === 'iade' && !note.trim()) return
+    let reference: string | null = null
+    let note = ''
+    let provider = 'manuel'
+    let transferFee = 0
+    let feePayer = 'platform'
+    let priority = 0
+
+    if (action === 'saticiya_aktar') {
+      provider = (prompt('Banka veya ödeme kuruluşu:', 'manuel') ?? '').trim()
+      if (!provider) return
+      const feeInput = (prompt('Banka/aktarım masrafı (₺):', '0') ?? '').trim().replace(',', '.')
+      transferFee = Number(feeInput)
+      if (!Number.isFinite(transferFee) || transferFee < 0) { setError('Geçerli bir aktarım masrafı girin.'); return }
+      const payerInput = (prompt('Masrafı kim karşılayacak? platform veya seller', 'platform') ?? '').trim().toLocaleLowerCase('tr-TR')
+      if (!['platform','seller'].includes(payerInput)) { setError('Masraf tarafı platform veya seller olmalıdır.'); return }
+      feePayer = payerInput
+      const priorityInput = (prompt('Ödeme önceliği (0–100):', '0') ?? '').trim()
+      priority = Number(priorityInput)
+      if (!Number.isInteger(priority) || priority < 0 || priority > 100) { setError('Öncelik 0–100 arasında olmalıdır.'); return }
+      note = prompt('Aktarım emri notu (isteğe bağlı):') ?? ''
+    } else {
+      reference = action === 'odeme_onayla' ? (prompt('Ödeme/dekont referansı (isteğe bağlı):') ?? '') : null
+      note = prompt(action === 'iade' ? 'İade açıklaması:' : 'Yönetim notu (isteğe bağlı):') ?? ''
+      if (action === 'iade' && !note.trim()) return
+    }
 
     setBusy(row.id)
     setError(null)
     const { error: reviewError } = action === 'saticiya_aktar'
-      ? await supabase.rpc('admin_release_trade_payment', {
+      ? await supabase.rpc('admin_create_trade_transfer_order', {
           p_payment_id: row.id,
+          p_provider: provider,
+          p_transfer_fee: transferFee,
+          p_fee_payer: feePayer,
+          p_priority: priority,
           p_note: note,
         })
       : await supabase.rpc('admin_review_trade_payment', {
@@ -408,6 +426,9 @@ export default function AdminFinancePage() {
           icon={Wallet}
           actions={
             <>
+              <Link href="/admin/finans/aktarimlar" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800">
+                <Wallet className="h-4 w-4" />Aktarım Merkezi
+              </Link>
               <button onClick={downloadCsv} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold">
                 <Download className="h-4 w-4" />CSV indir
               </button>
