@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, Factory, RefreshCw, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PlatformUI";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 import DecisionMessagePicker from "@/components/admin/DecisionMessagePicker";
 import type { DecisionAction } from "@/constants/adminDecisionMessages";
@@ -190,43 +191,9 @@ export default function AdminSlaughterhousesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 p-5 md:p-8">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-5">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-violet-600">
-              Tesis yönetimi
-            </p>
-            <h1 className="mt-1 text-3xl font-bold text-slate-900">
-              Kesimhaneler
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Entegre tesis başvurularını inceleyin ve yayın durumlarını
-              yönetin.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={exportCsv}
-              disabled={!filtered.length}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" /> CSV indir
-            </button>
-            <button
-              type="button"
-              onClick={() => void loadFacilities()}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-              />{" "}
-              Yenile
-            </button>
-          </div>
-        </header>
+        <PageHeader eyebrow="Tesis güven ve kapasite yönetimi" title="Kesimhaneler" description="Tesis başvurularını, resmî uygunluk durumlarını ve yayın erişimini yönetin." icon={Factory} tone="violet" actions={<><button type="button" onClick={exportCsv} disabled={!filtered.length} className="ui-button ui-button--secondary"><Download className="h-4 w-4" />CSV indir</button><button type="button" onClick={() => void loadFacilities()} disabled={loading} className="ui-button ui-button--primary"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Yenile</button></>} />
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {(["Beklemede", "Aktif", "Pasif", "Reddedildi"] as const).map(
