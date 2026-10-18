@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowDownLeft, ArrowUpRight, RefreshCw, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeader } from '@/components/ui/PlatformUI'
 
 type WalletTransaction = {
   id: string
@@ -95,21 +96,12 @@ export default function WalletPage() {
   )
 
   if (loading) {
-    return <main className="mx-auto max-w-6xl"><div className="rounded-2xl bg-white p-12 text-center text-slate-500">Cüzdan yükleniyor…</div></main>
+    return <main className="ui-page-shell"><div className="rounded-2xl bg-white p-12 text-center text-slate-500">Cüzdan yükleniyor…</div></main>
   }
 
   return (
     <main className="mx-auto max-w-6xl space-y-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-emerald-600">Finans merkezi</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">{wallet?.name ?? 'Cüzdan'}</h1>
-          <p className="mt-2 text-sm text-slate-500">Ticari teklifler ve kesimhane alımlarından oluşan hesap hareketleri.</p>
-        </div>
-        <button type="button" onClick={() => void loadWallet()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-          <RefreshCw className="h-4 w-4" /> Yenile
-        </button>
-      </header>
+      <PageHeader eyebrow="Finans ve hesap hareketleri" title={wallet?.name ?? "Cüzdan"} description="Ticari teklifler ve kesimhane alımlarından oluşan doğrulanmış hesap hareketlerinizi inceleyin." icon={Wallet} tone="emerald" actions={<button type="button" onClick={() => void loadWallet()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4"/>Yenile</button>} />
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
