@@ -220,7 +220,7 @@ export default function LivestockPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-50 px-6 py-12">
+      <main className="min-h-screen bg-slate-50 px-6 py-12 marketplace-page">
         <div className="mx-auto max-w-7xl">
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
             <RefreshCw className="mx-auto h-6 w-6 animate-spin text-emerald-600" />
