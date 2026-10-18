@@ -14,6 +14,7 @@ import {
   Search,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeader } from '@/components/ui/PlatformUI'
 
 type AuditRow = {
   id: string
@@ -160,19 +161,9 @@ export default function AdminAuditLogPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-5 md:p-8">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-emerald-600">Denetim merkezi</p>
-            <h1 className="mt-1 text-3xl font-bold text-slate-900">Platform Hareket Kayıtları</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Şirketlerin ve kullanıcıların ilan, teklif, faaliyet, randevu, ekspertiz, sözleşme ve finans hareketlerini tarihçeli olarak inceleyin.</p>
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={downloadCsv} disabled={!filtered.length} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50"><Download className="h-4 w-4" />CSV indir</button>
-            <button type="button" onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Yenile</button>
-          </div>
-        </header>
+        <PageHeader eyebrow="Denetim ve izlenebilirlik" title="Platform Hareket Kayıtları" description="İlan, teklif, faaliyet, randevu, ekspertiz, sözleşme ve finans hareketlerini değiştirilemez işlem izi mantığıyla inceleyin." icon={Activity} tone="emerald" actions={<><button type="button" onClick={downloadCsv} disabled={!filtered.length} className="ui-button ui-button--secondary"><Download className="h-4 w-4" />CSV indir</button><button type="button" onClick={() => void load()} className="ui-button ui-button--primary"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Yenile</button></>} />
 
         <section className="grid gap-3 sm:grid-cols-3">
           <Stat label="Toplam kayıt" value={rows.length} />
