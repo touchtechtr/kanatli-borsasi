@@ -28,7 +28,7 @@ export function PageHeader({
   description,
   icon: Icon,
   actions,
-  tone = "violet",
+  tone,
 }: {
   eyebrow?: string;
   title: string;
@@ -38,7 +38,7 @@ export function PageHeader({
   tone?: Tone;
 }) {
   return (
-    <header className={`ui-page-header ${toneClasses[tone]}`}>
+    <header className={`ui-page-header ${tone ? toneClasses[tone] : ""}`}>
       <div className="ui-page-header__glow" />
       <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div className="min-w-0">
