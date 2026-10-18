@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   TrendingUp,
   UserCircle,
+  Truck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ROLE_LABELS } from "@/constants/company";
@@ -31,6 +32,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     { href: "/borsa", label: "Piyasa Fiyatları", icon: TrendingUp },
     { href: "/sozlesme-yonetimi", label: "Sözleşmeli Üretim", icon: FileSignature },
     { href: "/kesimhane", label: "Kesimhane", icon: Factory },
+    { href: "/lojistik", label: "Lojistik Pazarı", icon: Truck },
   ] },
   { title: "Danışmanlık & Bilgi", items: [
     { href: "/ekspertiz", label: "Ekspertiz", icon: ClipboardCheck },
@@ -40,6 +42,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   { title: "Şirket Hesabı", items: [
     { href: "/profil/ilanlarim", label: "İlanlarım", icon: PackageSearch },
     { href: "/profil/teklifler", label: "Ticari Teklifler", icon: Handshake },
+    { href: "/profil/lojistik", label: "Nakliye ve Araçlar", icon: Truck },
     { href: "/profil", label: "Hesap Merkezi", icon: UserCircle, exact: true },
   ] },
 ];
