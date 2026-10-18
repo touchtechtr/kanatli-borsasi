@@ -32,6 +32,11 @@ type TradePayment = {
   created_at: string
   buyer: CompanyRef
   seller: CompanyRef
+  offer: {
+    id: string
+    delivery_confirmations: { party: 'seller' | 'buyer' }[]
+    delivery_disputes: { status: string }[]
+  } | null
 }
 
 type SlaughterhousePayment = {
@@ -108,7 +113,7 @@ export default function AdminFinancePage() {
       supabase
         .from('trade_payments')
         .select(
-          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name)',
+          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name),offer:trade_offers!trade_payments_trade_offer_id_fkey(id,delivery_confirmations:trade_delivery_confirmations(party),delivery_disputes:trade_delivery_disputes(status))',
         )
         .order('created_at', { ascending: false }),
       supabase
@@ -272,15 +277,17 @@ export default function AdminFinancePage() {
 
     setBusy(row.id)
     setError(null)
-    const { error: reviewError } = await supabase.rpc(
-      'admin_review_trade_payment',
-      {
-        p_payment_id: row.id,
-        p_action: action,
-        p_reference: reference,
-        p_note: note,
-      },
-    )
+    const { error: reviewError } = action === 'saticiya_aktar'
+      ? await supabase.rpc('admin_release_trade_payment', {
+          p_payment_id: row.id,
+          p_note: note,
+        })
+      : await supabase.rpc('admin_review_trade_payment', {
+          p_payment_id: row.id,
+          p_action: action,
+          p_reference: reference,
+          p_note: note,
+        })
 
     if (reviewError) setError(reviewError.message)
     else {
@@ -554,16 +561,37 @@ export default function AdminFinancePage() {
                           </button>
                         </>
                       )}
-                      {row.status === 'odendi_havuzda' && (
-                        <button
-                          disabled={busy !== null}
-                          onClick={() => void reviewTrade(row, 'iade')}
-                          className="inline-flex items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50"
-                        >
-                          <Undo2 className="h-3.5 w-3.5" />
-                          İade et
-                        </button>
-                      )}
+                      {row.status === 'odendi_havuzda' && (() => {
+                        const sellerConfirmed = row.offer?.delivery_confirmations?.some((item) => item.party === 'seller') ?? false
+                        const buyerConfirmed = row.offer?.delivery_confirmations?.some((item) => item.party === 'buyer') ?? false
+                        const hasOpenDispute = row.offer?.delivery_disputes?.some((item) => item.status === 'acik') ?? false
+                        return (
+                          <>
+                            <div className="grid grid-cols-2 gap-1 text-[10px] font-bold">
+                              <span className={sellerConfirmed ? 'rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700' : 'rounded-lg bg-slate-100 px-2 py-1 text-slate-500'}>Satıcı {sellerConfirmed ? 'onaylı' : 'bekleniyor'}</span>
+                              <span className={buyerConfirmed ? 'rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700' : 'rounded-lg bg-slate-100 px-2 py-1 text-slate-500'}>Alıcı {buyerConfirmed ? 'onaylı' : 'bekleniyor'}</span>
+                            </div>
+                            {sellerConfirmed && buyerConfirmed && !hasOpenDispute && (
+                              <button
+                                disabled={busy !== null}
+                                onClick={() => void reviewTrade(row, 'saticiya_aktar')}
+                                className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                              >
+                                Satıcıya aktar
+                              </button>
+                            )}
+                            {hasOpenDispute && <span className="rounded-xl bg-red-50 px-3 py-2 text-center text-xs font-bold text-red-700">Uyuşmazlık incelemede</span>}
+                            <button
+                              disabled={busy !== null}
+                              onClick={() => void reviewTrade(row, 'iade')}
+                              className="inline-flex items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50"
+                            >
+                              <Undo2 className="h-3.5 w-3.5" />
+                              İade et
+                            </button>
+                          </>
+                        )
+                      })()}
                     </div>
                   }
                 />
