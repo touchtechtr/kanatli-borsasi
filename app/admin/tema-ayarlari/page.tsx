@@ -397,7 +397,7 @@ export default function AdminThemeSettingsPage() {
                 </div>
               }
             />
-            <div className="overflow-x-auto rounded-2xl bg-slate-100 p-3 sm:p-5">
+            <div className="overflow-x-auto rounded-2xl bg-[radial-gradient(circle_at_top_left,rgba(var(--ui-primary),.16),transparent_42%),linear-gradient(135deg,#e2e8f0,#f8fafc_48%,#e0e7ff)] p-3 sm:p-5">
               <div
                 style={{ ...previewStyle, width: deviceWidth }}
                 className={(scope === "admin" ? "theme-admin" : "theme-marketplace") + " mx-auto transition-all duration-300"}
@@ -406,21 +406,92 @@ export default function AdminThemeSettingsPage() {
                 data-heading-font={settings.headingFont}
                 data-motion={settings.motion}
               >
-                <div className="rounded-[var(--ui-radius-card)] border border-white/70 bg-white p-4 shadow-xl shadow-slate-200/70 sm:p-6">
-                  <div className="rounded-2xl bg-[linear-gradient(135deg,rgba(var(--ui-primary),.16),rgba(255,255,255,.94))] p-5">
-                    <p className="ui-eyebrow">{scope === "admin" ? "Yönetim çalışma alanı" : "Güvenli ticaret ağı"}</p>
-                    <h2 className="ui-page-title mt-2">{scope === "admin" ? "Platform kontrol merkezi" : "Doğrulanmış ilan pazarı"}</h2>
-                    <p className="ui-page-description">Seçtiğiniz görünüm ortak bileşenleri kullanan bütün ilgili sayfalara uygulanır.</p>
+                <div className="rounded-[var(--ui-radius-card)] border border-white/70 bg-white/45 p-3 shadow-2xl shadow-slate-400/20 backdrop-blur-sm sm:p-4">
+                  <div className="mb-3 flex items-center justify-between rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="h-7 w-7 rounded-lg bg-[rgb(var(--ui-primary))]" />
+                      <div>
+                        <p className="text-[10px] font-black text-slate-800">{scope === "admin" ? "YÖNETİM" : "PAZAR"}</p>
+                        <p className="text-[9px] text-slate-400">Tema önizlemesi</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5"><i className="h-2 w-2 rounded-full bg-red-400" /><i className="h-2 w-2 rounded-full bg-amber-400" /><i className="h-2 w-2 rounded-full bg-emerald-400" /></div>
                   </div>
-                  <div className={"mt-4 grid gap-3 " + (device === "mobile" ? "grid-cols-1" : "grid-cols-3")}>
+
+                  <SurfaceCard>
+                    <div className="rounded-2xl bg-[linear-gradient(135deg,rgba(var(--ui-primary),.16),rgba(var(--ui-accent),.08),rgba(255,255,255,.94))] p-5">
+                      <p className="ui-eyebrow">{scope === "admin" ? "Yönetim çalışma alanı" : "Güvenli ticaret ağı"}</p>
+                      <h2 className="ui-page-title mt-2">{scope === "admin" ? "Platform kontrol merkezi" : "Doğrulanmış ilan pazarı"}</h2>
+                      <p className="ui-page-description">Başlık fontu, boşluk yoğunluğu, köşeler ve yüzey stili bu gerçek sayfa örneğine uygulanır.</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button className="rounded-xl bg-[rgb(var(--ui-primary))] px-3 py-2 text-xs font-black text-white shadow-lg shadow-slate-900/10">Ana işlem</button>
+                        <button className="rounded-xl border border-[rgba(var(--ui-primary),.25)] bg-white/80 px-3 py-2 text-xs font-black text-[rgb(var(--ui-primary))]">İkincil işlem</button>
+                      </div>
+                    </div>
+                  </SurfaceCard>
+
+                  <div className={"mt-3 grid gap-3 " + (device === "mobile" ? "grid-cols-1" : "grid-cols-3")}>
                     <MetricCard label="Aktif kayıt" value="128" helper="Güncel toplam" tone="violet" />
                     <MetricCard label="Onaylanan" value="42" helper="Bu dönem" tone="emerald" />
                     <MetricCard label="Bekleyen" value="7" helper="İnceleme gerekli" tone="amber" />
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <StatusBadge tone="emerald"><Check className="mr-1 h-3 w-3" />Onaylandı</StatusBadge>
-                    <StatusBadge tone="amber">İnceleme bekliyor</StatusBadge>
-                    <StatusBadge tone="red">Reddedildi</StatusBadge>
+
+                  <div className={"mt-3 grid gap-3 " + (device === "desktop" ? "grid-cols-[1.15fr_.85fr]" : "grid-cols-1")}>
+                    <SurfaceCard interactive>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <StatusBadge tone="emerald"><Check className="mr-1 h-3 w-3" />Doğrulandı</StatusBadge>
+                          <h3 className="ui-section-title mt-3">Premium ilan kartı</h3>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">Kart görünümü seçiminin kenarlık, yüzey, gölge ve cam etkisini burada karşılaştırın.</p>
+                        </div>
+                        <span className="rounded-xl bg-[rgba(var(--ui-accent),.14)] px-2.5 py-1.5 text-xs font-black text-[rgb(var(--ui-accent))]">₺24.500</span>
+                      </div>
+                      <div className="mt-4 h-20 rounded-xl bg-[linear-gradient(125deg,rgba(var(--ui-primary),.2),rgba(var(--ui-accent),.13))]" />
+                      <div className="mt-3 flex items-center justify-between text-[10px] font-bold text-slate-400"><span>Antalya</span><span>Bugün</span></div>
+                    </SurfaceCard>
+
+                    <SurfaceCard>
+                      <h3 className="ui-section-title">Form ve kontroller</h3>
+                      <p className="mt-1 text-xs text-slate-500">Alanlar ve işlem bileşenleri</p>
+                      <div className="mt-4 space-y-2">
+                        <input className="ui-input" value="Örnek kayıt başlığı" readOnly aria-label="Örnek kayıt başlığı" />
+                        <select className="ui-input" value="beklemede" onChange={() => undefined} aria-label="Örnek durum">
+                          <option value="beklemede">İnceleme bekliyor</option>
+                        </select>
+                        <button className="w-full rounded-xl bg-[rgb(var(--ui-primary))] px-3 py-2.5 text-xs font-black text-white">Kaydet ve devam et</button>
+                      </div>
+                    </SurfaceCard>
+                  </div>
+
+                  <SurfaceCard className="mt-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="ui-section-title">Liste ve durum satırı</h3>
+                        <p className="mt-1 text-xs text-slate-500">Tablo, bildirim ve operasyon ekranlarına yakın örnek</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <StatusBadge tone="emerald">Onaylandı</StatusBadge>
+                        <StatusBadge tone="amber">Bekliyor</StatusBadge>
+                        <StatusBadge tone="red">Reddedildi</StatusBadge>
+                      </div>
+                    </div>
+                    <div className="mt-4 overflow-hidden rounded-xl border border-slate-200/80">
+                      {["Touchtech.tr", "Akdeniz Yem", "Antalya Kesim"].map((name, index) => (
+                        <div key={name} className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white/60 px-3 py-2.5 text-xs last:border-0">
+                          <span className="font-bold text-slate-700">{name}</span>
+                          <span className={index === 1 ? "font-black text-amber-600" : "font-black text-emerald-600"}>{index === 1 ? "Bekliyor" : "Aktif"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </SurfaceCard>
+
+                  <div className="mt-3 rounded-xl border border-dashed border-[rgba(var(--ui-primary),.28)] bg-[rgba(var(--ui-primary),.07)] p-3 text-xs text-slate-600">
+                    <strong className="text-[rgb(var(--ui-primary))]">{optionLabels[settings.cardStyle]} kart görünümü:</strong>{" "}
+                    {settings.cardStyle === "flat" && "Gölgesiz, sade ve hızlı okunur yüzeyler."}
+                    {settings.cardStyle === "soft" && "Hafif renkli yüzey ve yumuşak gölge dengesi."}
+                    {settings.cardStyle === "elevated" && "Belirgin derinlik ve güçlü kart hiyerarşisi."}
+                    {settings.cardStyle === "glass" && "Saydam yüzey, arka plan rengi ve bulanıklık etkisi."}
+                    {settings.cardStyle === "outlined" && "Kalın kenarlıkla ayrılan net operasyon kartları."}
                   </div>
                 </div>
               </div>
