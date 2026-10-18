@@ -2,12 +2,11 @@
 import { useCallback,useEffect,useMemo,useState } from "react";
 import Link from "next/link";
 import { PackageSearch,Send,Truck } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader,PageShell,SurfaceCard } from "@/components/ui/PlatformUI";
 type Vehicle={id:string;plate:string;vehicle_type:string;capacity:number;capacity_unit:string};
 export default function NewLogisticsPage(){
- const supabase=useMemo(()=>createClient(),[]);const params=useSearchParams();const requestId=params.get("request");const[mode,setMode]=useState<"service"|"request"|"quote">(requestId?"quote":"service");const[vehicles,setVehicles]=useState<Vehicle[]>([]);const[access,setAccess]=useState<{active?:boolean}>({});const[error,setError]=useState<string|null>(null);const[message,setMessage]=useState<string|null>(null);const[busy,setBusy]=useState(false);
+ const supabase=useMemo(()=>createClient(),[]);const[requestId,setRequestId]=useState<string|null>(null);const[mode,setMode]=useState<"service"|"request"|"quote">("service");const[vehicles,setVehicles]=useState<Vehicle[]>([]);const[access,setAccess]=useState<{active?:boolean}>({});const[error,setError]=useState<string|null>(null);const[message,setMessage]=useState<string|null>(null);const[busy,setBusy]=useState(false);
  const[form,setForm]=useState({title:"",capability:"canli_hayvan",origin_city:"",destination_city:"",service_area:"",available_from:"",available_to:"",price:"",price_unit:"teklif",description:"",vehicle_id:"",pickup_date:"",quantity:"",quantity_unit:"ton",amount:"",message:""});
  const load=useCallback(async()=>{const a=await supabase.rpc("get_my_logistics_access");if(a.error){setError(a.error.message);return}setAccess(a.data??{});const v=await supabase.from("logistics_vehicles").select("id,plate,vehicle_type,capacity,capacity_unit").eq("status","onaylandi");if(!v.error)setVehicles((v.data??[]) as Vehicle[])},[supabase]);useEffect(()=>{void load()},[load]);
  const submit=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setError(null);setMessage(null);let r;
