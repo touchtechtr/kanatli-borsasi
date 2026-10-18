@@ -37,6 +37,8 @@ type Offer = {
   created_at: string;
   buyerName: string;
   sellerName: string;
+  delivery_confirmations: { party: "seller" | "buyer"; confirmed_at: string }[];
+  delivery_disputes: { status: string; reason: string; created_at: string }[];
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -94,7 +96,7 @@ export default function CompanyOffersPage() {
     const { data, error } = await supabase
       .from("trade_offers")
       .select(
-        "id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, seller_unit_price, buyer_unit_price, subtotal_amount, commission_amount, total_amount, message, status, admin_status, created_at",
+        "id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, seller_unit_price, buyer_unit_price, subtotal_amount, commission_amount, total_amount, message, status, admin_status, created_at, delivery_confirmations:trade_delivery_confirmations(party,confirmed_at), delivery_disputes:trade_delivery_disputes(status,reason,created_at)",
       )
       .or(
         `buyer_company_id.eq.${companyData.id},seller_company_id.eq.${companyData.id}`,
@@ -197,6 +199,36 @@ export default function CompanyOffersPage() {
       .update({ status: nextStatus })
       .eq("id", offer.id);
     if (error) setErrorMessage("Teklif güncellenemedi: " + error.message);
+    else await loadOffers();
+    setProcessingId(null);
+  };
+
+  const confirmDelivery = async (offer: Offer, party: "seller" | "buyer") => {
+    const message = party === "seller"
+      ? "Ürünü teslim ettiğinizi onaylıyor musunuz?"
+      : "Ürünü eksiksiz teslim aldığınızı onaylıyor musunuz?";
+    if (!confirm(message)) return;
+    setProcessingId(offer.id);
+    setErrorMessage(null);
+    const { error } = await supabase.rpc("confirm_trade_delivery", {
+      p_offer_id: offer.id,
+      p_party: party,
+    });
+    if (error) setErrorMessage("Teslimat onaylanamadı: " + error.message);
+    else await loadOffers();
+    setProcessingId(null);
+  };
+
+  const openDispute = async (offer: Offer) => {
+    const reason = prompt("Uyuşmazlık nedenini en az 10 karakterle açıklayın:")?.trim();
+    if (!reason) return;
+    setProcessingId(offer.id);
+    setErrorMessage(null);
+    const { error } = await supabase.rpc("dispute_trade_delivery", {
+      p_offer_id: offer.id,
+      p_reason: reason,
+    });
+    if (error) setErrorMessage("Uyuşmazlık açılamadı: " + error.message);
     else await loadOffers();
     setProcessingId(null);
   };
@@ -398,15 +430,39 @@ export default function CompanyOffersPage() {
                           İptal et
                         </button>
                       )}
-                      {isIncoming && offer.status === "kabul_edildi" && (
-                        <button
-                          disabled={processingId === offer.id}
-                          onClick={() => void changeStatus(offer, "tamamlandi")}
-                          className="rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-bold text-white"
-                        >
-                          Tamamlandı
-                        </button>
-                      )}
+                      {offer.status === "kabul_edildi" && (() => {
+                        const sellerConfirmed = offer.delivery_confirmations?.some((item) => item.party === "seller");
+                        const buyerConfirmed = offer.delivery_confirmations?.some((item) => item.party === "buyer");
+                        const hasOpenDispute = offer.delivery_disputes?.some((item) => item.status === "acik");
+                        const ownConfirmed = isIncoming ? sellerConfirmed : buyerConfirmed;
+                        return (
+                          <>
+                            <div className="grid grid-cols-2 gap-1 text-[10px] font-bold">
+                              <span className={sellerConfirmed ? "rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700" : "rounded-lg bg-slate-100 px-2 py-1 text-slate-500"}>Satıcı {sellerConfirmed ? "onayladı" : "bekleniyor"}</span>
+                              <span className={buyerConfirmed ? "rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700" : "rounded-lg bg-slate-100 px-2 py-1 text-slate-500"}>Alıcı {buyerConfirmed ? "onayladı" : "bekleniyor"}</span>
+                            </div>
+                            {!ownConfirmed && !hasOpenDispute && (
+                              <button
+                                disabled={processingId === offer.id}
+                                onClick={() => void confirmDelivery(offer, isIncoming ? "seller" : "buyer")}
+                                className="rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+                              >
+                                {isIncoming ? "Teslim ettim" : "Teslim aldım"}
+                              </button>
+                            )}
+                            {!hasOpenDispute && (
+                              <button
+                                disabled={processingId === offer.id}
+                                onClick={() => void openDispute(offer)}
+                                className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800 disabled:opacity-50"
+                              >
+                                Sorun bildir
+                              </button>
+                            )}
+                            {hasOpenDispute && <span className="rounded-xl bg-red-50 px-3 py-2.5 text-center text-xs font-bold text-red-700">Uyuşmazlık incelemede</span>}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </article>
