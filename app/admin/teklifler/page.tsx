@@ -706,7 +706,7 @@ export default function AdminTradeOffersPage() {
 
     <main className="ui-page-shell text-slate-800">
 
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
 
         <PageHeader
           eyebrow="Güvenli ticaret denetimi"
@@ -719,7 +719,7 @@ export default function AdminTradeOffersPage() {
 
 
 
-        <section className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+        <section className="ui-surface-card overflow-hidden bg-[linear-gradient(135deg,rgba(var(--ui-primary),.08),rgba(var(--ui-accent),.08),rgba(255,255,255,.94))]">
 
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
 
@@ -773,7 +773,7 @@ export default function AdminTradeOffersPage() {
 
                   onChange={(event) => setCommissionRate(event.target.value)}
 
-                  className="w-32 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                  className="ui-input w-32 font-bold"
 
                 />
 
