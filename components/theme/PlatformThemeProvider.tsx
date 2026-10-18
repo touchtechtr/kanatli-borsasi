@@ -49,8 +49,18 @@ export default function PlatformThemeProvider({
       setSettings({ ...defaults, ...(data as Partial<ThemeSettings>) });
     };
 
+    const handleThemePublished = (event: Event) => {
+      const detail = (event as CustomEvent<{ scope?: ThemeScope }>).detail;
+      if (!detail?.scope || detail.scope === scope) void loadTheme();
+    };
+
     void loadTheme();
-    return () => { mounted = false; };
+    window.addEventListener("platform-theme-published", handleThemePublished);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("platform-theme-published", handleThemePublished);
+    };
   }, [defaults, scope, supabase]);
 
   const style = {
