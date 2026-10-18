@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { ADMIN_DECISION_MESSAGES, type DecisionAction } from '@/constants/adminDecisionMessages'
 
 type Props = {
@@ -11,8 +12,13 @@ type Props = {
 
 export default function DecisionMessagePicker({ action, value, onChange, disabled }: Props) {
   const options = ADMIN_DECISION_MESSAGES[action]
-  const isPreset = options.includes(value)
-  const selection = isPreset ? value : value ? '__other__' : ''
+  const [customMode, setCustomMode] = useState(Boolean(value && !options.includes(value)))
+
+  useEffect(() => {
+    if (value && options.includes(value)) setCustomMode(false)
+  }, [options, value])
+
+  const selection = customMode ? '__other__' : options.includes(value) ? value : ''
 
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -22,21 +28,30 @@ export default function DecisionMessagePicker({ action, value, onChange, disable
       <select
         value={selection}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value === '__other__' ? '' : event.target.value)}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800"
+        onChange={(event) => {
+          if (event.target.value === '__other__') {
+            setCustomMode(true)
+            onChange('')
+            return
+          }
+          setCustomMode(false)
+          onChange(event.target.value)
+        }}
+        className="ui-input"
       >
         <option value="">Standart açıklama seçin</option>
         {options.map((message) => <option key={message} value={message}>{message}</option>)}
         <option value="__other__">Diğer — kendim yazacağım</option>
       </select>
-      {selection === '__other__' && (
+      {customMode && (
         <textarea
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           rows={3}
           placeholder="Kullanıcıya iletilecek özel açıklamayı yazın."
-          className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm"
+          className="ui-input"
+          autoFocus
         />
       )}
       <p className="text-xs text-slate-500">
