@@ -13,6 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PlatformUI";
 
 type OfferStatus =
   "beklemede" | "kabul_edildi" | "reddedildi" | "iptal_edildi" | "tamamlandi";
@@ -201,29 +202,9 @@ export default function CompanyOffersPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">
-              Şirket ticaret merkezi
-            </p>
-            <h1 className="mt-1 text-3xl font-extrabold text-slate-900">
-              Ticari Teklifler
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              {company?.name || "Şirketiniz"} adına gelen ve gönderilen
-              teklifleri tek ekrandan yönetin.
-            </p>
-          </div>
-          <button
-            onClick={() => void loadOffers()}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Yenile
-          </button>
-        </header>
+        <PageHeader eyebrow="Şirket ticaret merkezi" title="Ticari Teklifler" description="Gelen ve gönderilen teklifleri, karşı tarafı ve işlem durumunu tek ekrandan yönetin." icon={Handshake} tone="emerald" actions={<button onClick={() => void loadOffers()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4"/>Yenile</button>} />
 
         {errorMessage && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
