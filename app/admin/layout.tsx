@@ -38,7 +38,7 @@ import PlatformThemeProvider from "@/components/theme/PlatformThemeProvider";
 const ROLE_PATHS: Record<string, string[]> = {
   moderator: ["/admin", "/admin/hareket-kayitlari", "/admin/firmalar", "/admin/faaliyetler", "/admin/ilanlar", "/admin/ilan-promosyonlari", "/admin/ilan-kurallari", "/admin/teklifler", "/admin/kullanicilar"],
   finance: ["/admin", "/admin/hareket-kayitlari", "/admin/finans", "/admin/teklifler", "/admin/ilan-promosyonlari", "/admin/kesimhane-alimlari"],
-  operations: ["/admin", "/admin/hareket-kayitlari", "/admin/randevular", "/admin/ekspertiz", "/admin/sozlesmeler", "/admin/kesimhaneler", "/admin/kesimhane-alimlari", "/admin/eposta-kuyrugu"],
+  operations: ["/admin", "/admin/hareket-kayitlari", "/admin/randevular", "/admin/ekspertiz", "/admin/sozlesmeler", "/admin/kesimhaneler", "/admin/kesimhane-alimlari", "/admin/lojistik", "/admin/eposta-kuyrugu"],
   auditor: ["/admin", "/admin/hareket-kayitlari", "/admin/sistem-sagligi"],
 };
 
@@ -84,6 +84,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
       { label: "Sözleşmeler", href: "/admin/sozlesmeler", icon: FileSignature },
       { label: "Kesimhaneler", href: "/admin/kesimhaneler", icon: Factory },
       { label: "Kesimhane Alımları", href: "/admin/kesimhane-alimlari", icon: Truck },
+      { label: "Nakliye Yönetimi", href: "/admin/lojistik", icon: Truck },
     ],
   },
   {
