@@ -103,7 +103,7 @@ export default function NewListingCenterPage() {
   }, [router, supabase]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 marketplace-page">
       <div className="mx-auto max-w-6xl space-y-7">
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-emerald-700">
           <ArrowLeft className="h-4 w-4" /> Pazara dön
