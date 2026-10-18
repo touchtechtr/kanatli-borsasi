@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PlatformUI";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 import DecisionMessagePicker from "@/components/admin/DecisionMessagePicker";
 import type { DecisionAction } from "@/constants/adminDecisionMessages";
@@ -260,30 +261,9 @@ export default function AdminExpertRequestsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 md:p-10">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-emerald-600">
-              Hizmet yönetimi
-            </p>
-            <h1 className="mt-1 text-3xl font-bold text-slate-900">
-              Ekspertiz Talepleri
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Talepleri inceleyin, uzman atayın veya gerekçesiyle reddedin.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void loadRequests()}
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />{" "}
-            Yenile
-          </button>
-        </header>
+        <PageHeader eyebrow="Hizmet ve uzman denetimi" title="Ekspertiz Talepleri" description="Talepleri inceleyin, uzman yetkinliğini doğrulayın, atama yapın veya gerekçesiyle reddedin." icon={SearchCheck} tone="emerald" actions={<button type="button" onClick={() => void loadRequests()} disabled={loading} className="ui-button ui-button--secondary"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Yenile</button>} />
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {statCards.map(
