@@ -105,51 +105,114 @@ export default function SidebarContent({ onNavigate }: { onNavigate?: () => void
     window.location.replace("/auth");
   };
 
+  const accent = account.isAdmin
+    ? {
+        active: "bg-violet-500/15 text-violet-300",
+        icon: "text-violet-300",
+        dot: "bg-violet-400",
+        brand: "text-violet-400",
+        avatar: "bg-violet-600",
+      }
+    : {
+        active: "bg-tarim-600/15 text-tarim-400",
+        icon: "text-tarim-400",
+        dot: "bg-tarim-500",
+        brand: "text-tarim-500",
+        avatar: "bg-tarim-600",
+      };
+
   return <>
     <div className="flex h-16 flex-shrink-0 items-center gap-2 border-b border-navy-800 px-6">
-      <Feather className="h-6 w-6 text-tarim-500" strokeWidth={2.5} />
-      <span className="text-lg font-semibold tracking-tight text-white">Kanatlı<span className="text-tarim-500">Borsa</span></span>
+      <Feather className={`h-6 w-6 ${accent.brand}`} strokeWidth={2.5} />
+      <span className="text-lg font-semibold tracking-tight text-white">
+        Kanatlı<span className={accent.brand}>Borsa</span>
+      </span>
     </div>
+
     <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
-      {account.isAdmin ? <>
+      {account.isAdmin && (
         <div>
-          <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">Platform yönetimi</p>
-          <Link href="/admin" onClick={onNavigate} className="group flex items-center gap-3 rounded-xl bg-violet-600 px-3 py-3 text-sm font-extrabold text-white shadow-lg shadow-violet-950/20 transition hover:bg-violet-500">
-            <ShieldCheck className="h-[18px] w-[18px]" /> Yönetim Merkezi
-            <span className="ml-auto text-[10px] text-violet-200">Ana panel</span>
+          <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+            Platform yönetimi
+          </p>
+          <Link
+            href="/admin"
+            onClick={onNavigate}
+            className="group flex items-center gap-3 rounded-xl bg-violet-600 px-3 py-3 text-sm font-extrabold text-white shadow-lg shadow-violet-950/20 transition hover:bg-violet-500"
+          >
+            <ShieldCheck className="h-[18px] w-[18px]" />
+            Yönetim Merkezi
+            <span className="ml-auto text-[10px] text-violet-200">Admin</span>
           </Link>
         </div>
-        {ADMIN_GROUPS.map((group) => {
-          const allowed = account.adminRole === "super_admin" ? group.items : group.items.filter((item) => (ADMIN_ROLE_PATHS[account.adminRole ?? ""] ?? ["/admin"]).includes(item.href));
-          if (!allowed.length) return null;
-          return <div key={group.title}>
-            <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">{group.title}</p>
-            <div className="space-y-1">{allowed.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
-              return <Link key={href} href={href} onClick={onNavigate} className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-violet-500/15 text-violet-300" : "text-slate-400 hover:bg-navy-800 hover:text-white"}`}>
-                <Icon className={`h-[18px] w-[18px] flex-shrink-0 ${active ? "text-violet-300" : "text-slate-500 group-hover:text-violet-300"}`} />{label}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-violet-400" />}
-              </Link>;
-            })}</div>
-          </div>;
-        })}
-      </> : NAV_GROUPS.map((group) => <div key={group.title}>
-        <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">{group.title}</p>
-        <div className="space-y-1">{group.items.map(({ href, label, icon: Icon, exact }) => {
-          const active = href === "/" || exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-          return <Link key={href} href={href} onClick={onNavigate} className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-tarim-600/15 text-tarim-400" : "text-slate-400 hover:bg-navy-800 hover:text-white"}`}>
-            <Icon className="h-[18px] w-[18px] flex-shrink-0" />{label}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-tarim-500" />}
-          </Link>;
-        })}</div>
-      </div>)}
+      )}
+
+      {NAV_GROUPS.map((group) => (
+        <div key={group.title}>
+          <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+            {group.title}
+          </p>
+          <div className="space-y-1">
+            {group.items.map(({ href, label, icon: Icon, exact }) => {
+              const active =
+                href === "/" || exact
+                  ? pathname === href
+                  : pathname === href || pathname.startsWith(`${href}/`);
+
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onNavigate}
+                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? accent.active
+                      : "text-slate-400 hover:bg-navy-800 hover:text-white"
+                  }`}
+                >
+                  <Icon
+                    className={`h-[18px] w-[18px] flex-shrink-0 ${
+                      active ? accent.icon : ""
+                    }`}
+                  />
+                  {label}
+                  {active && (
+                    <span className={`ml-auto h-1.5 w-1.5 rounded-full ${accent.dot}`} />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </nav>
+
     <div className="flex-shrink-0 space-y-2 border-t border-navy-800 p-4">
-      <Link href={account.authenticated ? (account.isAdmin ? "/admin" : "/profil") : "/auth"} onClick={onNavigate} className="flex items-center gap-3 rounded-lg bg-navy-900 px-3 py-2.5 transition-colors hover:bg-navy-800">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-tarim-600 text-sm font-semibold text-white">{account.initials}</div>
-        <div className="min-w-0"><p className="truncate text-sm font-medium text-white">{account.name}</p><p className="truncate text-xs text-slate-500">{account.label}</p></div>
+      <Link
+        href={account.authenticated ? (account.isAdmin ? "/admin" : "/profil") : "/auth"}
+        onClick={onNavigate}
+        className="flex items-center gap-3 rounded-lg bg-navy-900 px-3 py-2.5 transition-colors hover:bg-navy-800"
+      >
+        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${accent.avatar} text-sm font-semibold text-white`}>
+          {account.initials}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-white">{account.name}</p>
+          <p className="truncate text-xs text-slate-500">{account.label}</p>
+        </div>
       </Link>
-      {account.authenticated && <button type="button" onClick={() => void handleSignOut()} disabled={signingOut} className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-900/60 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-950/50 disabled:opacity-50">
-        <LogOut className="h-3.5 w-3.5" />{signingOut ? "Çıkılıyor…" : "Çıkış Yap"}
-      </button>}
+
+      {account.authenticated && (
+        <button
+          type="button"
+          onClick={() => void handleSignOut()}
+          disabled={signingOut}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-900/60 px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-950/50 disabled:opacity-50"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          {signingOut ? "Çıkılıyor…" : "Çıkış Yap"}
+        </button>
+      )}
     </div>
   </>;
 }
