@@ -24,27 +24,37 @@ type LifecycleHealth={
   invalid_quantity_balance:number;
   multiple_accepted_offers:number;
 };
+type ReadinessHealth={
+  checked_at:string;
+  security:{rls_disabled_tables:number;rls_tables_without_policy:number;unsafe_security_definer_functions:number;anonymous_mutation_grants:number};
+  communications:{stale_email_queue:number;orphan_email_recipients:number;duplicate_pending_emails:number};
+  operations:{stale_deliveries:number;completed_delivery_without_evidence:number;accepted_offer_without_delivery:number;stale_transport_requests:number;matched_transport_without_offer:number};
+  identity:{profiles_without_auth_user:number;duplicate_company_tax_numbers:number};
+};
 type CheckRow={label:string;value:number;description:string;href:string};
 
 export default function AdminSystemHealthPage(){
   const supabase=useMemo(()=>createClient(),[]);
   const[data,setData]=useState<HealthData|null>(null);
   const[lifecycle,setLifecycle]=useState<LifecycleHealth|null>(null);
+  const[readiness,setReadiness]=useState<ReadinessHealth|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<string|null>(null);
 
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
-    const[coreResult,lifecycleResult]=await Promise.all([
+    const[coreResult,lifecycleResult,readinessResult]=await Promise.all([
       supabase.rpc("admin_system_integrity_health"),
-      supabase.rpc("admin_listing_lifecycle_health")
+      supabase.rpc("admin_listing_lifecycle_health"),
+      supabase.rpc("admin_production_readiness_health")
     ]);
-    const loadError=coreResult.error||lifecycleResult.error;
+    const loadError=coreResult.error||lifecycleResult.error||readinessResult.error;
     if(loadError){
-      setError(loadError.message);setData(null);setLifecycle(null);
+      setError(loadError.message);setData(null);setLifecycle(null);setReadiness(null);
     }else{
       setData(coreResult.data as HealthData);
       setLifecycle(lifecycleResult.data as LifecycleHealth);
+      setReadiness(readinessResult.data as ReadinessHealth);
     }
     setLoading(false);
   },[supabase]);
@@ -70,6 +80,22 @@ export default function AdminSystemHealthPage(){
       {label:"Kalan miktarlı tamamlanmış ilan",value:lifecycle.completed_with_remaining_quantity,description:"Tamamlandığı halde satılabilir miktarı bulunan ilanlar.",href:"/admin/ilanlar"},
       {label:"Geçersiz miktar dengesi",value:lifecycle.invalid_quantity_balance,description:"İlk, kalan, rezerve ve satılan miktarları uyuşmayan ilanlar.",href:"/admin/ilanlar"},
       {label:"Birden fazla kabul edilmiş teklif",value:lifecycle.multiple_accepted_offers,description:"Aynı ilan için eş zamanlı kabul edilmiş birden fazla teklif.",href:"/admin/teklifler"}
+    ]:[]),
+    ...(readiness?[
+      {label:"RLS kapalı tablo",value:readiness.security.rls_disabled_tables,description:"Public şemada satır güvenliği etkin olmayan tablolar.",href:"/admin/sistem-sagligi"},
+      {label:"Politikasız RLS tablosu",value:readiness.security.rls_tables_without_policy,description:"RLS açık olduğu halde erişim politikası bulunmayan tablolar.",href:"/admin/sistem-sagligi"},
+      {label:"Güvensiz SECURITY DEFINER",value:readiness.security.unsafe_security_definer_functions,description:"Sabit search_path tanımı olmayan yetkili veritabanı fonksiyonları.",href:"/admin/sistem-sagligi"},
+      {label:"Anonim yazma yetkisi",value:readiness.security.anonymous_mutation_grants,description:"Anon rolüne doğrudan ekleme, değiştirme veya silme yetkisi verilen tablolar.",href:"/admin/sistem-sagligi"},
+      {label:"Gecikmiş e-posta kuyruğu",value:readiness.communications.stale_email_queue,description:"Otuz dakikadan uzun süredir gönderilemeyen bildirim e-postaları.",href:"/admin/eposta-kuyrugu"},
+      {label:"Sahipsiz e-posta alıcısı",value:readiness.communications.orphan_email_recipients,description:"Artık kullanıcı hesabı bulunmayan e-posta kuyruğu kayıtları.",href:"/admin/eposta-kuyrugu"},
+      {label:"Tekrarlanan bekleyen e-posta",value:readiness.communications.duplicate_pending_emails,description:"Aynı alıcı ve içerik için birden fazla bekleyen gönderim.",href:"/admin/eposta-kuyrugu"},
+      {label:"Yedi gündür bekleyen teslimat",value:readiness.operations.stale_deliveries,description:"Tamamlanmamış veya iptal edilmemiş eski kesimhane teslimatları.",href:"/admin/kesimhane-alimlari"},
+      {label:"Kanıtsız tamamlanan teslimat",value:readiness.operations.completed_delivery_without_evidence,description:"Onay veya tamamlanma durumuna geldiği halde kanıtı bulunmayan teslimatlar.",href:"/admin/kesimhane-alimlari"},
+      {label:"Teslimatsız kabul edilen teklif",value:readiness.operations.accepted_offer_without_delivery,description:"Kabul edildiği halde teslimat dosyası oluşmayan kesimhane teklifleri.",href:"/admin/kesimhane-alimlari"},
+      {label:"Yedi gündür bekleyen nakliye",value:readiness.operations.stale_transport_requests,description:"Tamamlanmamış veya iptal edilmemiş eski taşıma talepleri.",href:"/admin/lojistik"},
+      {label:"Teklifsiz eşleşmiş nakliye",value:readiness.operations.matched_transport_without_offer,description:"Eşleşmiş göründüğü halde kabul edilmiş taşıma teklifi bulunmayan talepler.",href:"/admin/lojistik"},
+      {label:"Auth kaydı olmayan profil",value:readiness.identity.profiles_without_auth_user,description:"Kimlik doğrulama kullanıcısı silinmiş profil kayıtları.",href:"/admin/kullanicilar"},
+      {label:"Tekrarlanan vergi numarası",value:readiness.identity.duplicate_company_tax_numbers,description:"Birden fazla şirkette kullanılan aynı vergi numaraları.",href:"/admin/firmalar"}
     ]:[])
   ]:[];
   const issueCount=checks.reduce((total,item)=>total+item.value,0);
@@ -80,7 +106,7 @@ export default function AdminSystemHealthPage(){
     <PageHeader
       eyebrow="Platform bütünlük denetimi"
       title="Sistem Sağlığı"
-      description="Yetkilendirme, ödeme, cüzdan, kesimhane teslimatı ve e-posta kuyruğundaki tutarsızlıkları tek ekrandan izleyin."
+      description="Yetkilendirme, RLS güvenliği, ödeme, bildirim, teslimat, lojistik ve kimlik bütünlüğünü tek ekrandan izleyin."
       icon={ShieldCheck}
       actions={<button type="button" onClick={()=>void load()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white transition hover:opacity-90 disabled:opacity-60"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/>Yeniden denetle</button>}
     />
@@ -90,7 +116,7 @@ export default function AdminSystemHealthPage(){
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <MetricCard label="Bütünlük sorunu" value={loading?"—":String(issueCount)} helper={issueCount?"İncelenmesi gereken kayıt":"Kritik tutarsızlık bulunmadı"} icon={issueCount?AlertTriangle:CheckCircle2} tone={issueCount?"amber":"emerald"}/>
       <MetricCard label="Yetki kuralı" value={loading?"—":String(data?.authorization.enabled_operation_rules??0)} helper="Etkin merkezi işlem kuralı" icon={BadgeCheck} tone="violet"/>
-      <MetricCard label="Durum koruması" value={loading?"—":guardCount+" / "+guardTotal} helper="Gerekli güvenlik fonksiyonları" icon={Database} tone={guardCount===guardTotal?"emerald":"amber"}/>
+      <MetricCard label="Durum koruması" value={loading?"—":guardCount+" / "+guardTotal} helper={"RLS sorunu: "+String((readiness?.security.rls_disabled_tables??0)+(readiness?.security.rls_tables_without_policy??0))} icon={Database} tone={guardCount===guardTotal&&(readiness?.security.rls_disabled_tables??0)===0?"emerald":"amber"}/>
       <MetricCard label="E-posta kuyruğu" value={loading?"—":String(data?.email_queue.pending??0)} helper={String(data?.email_queue.failed??0)+" yeniden denenecek hata"} icon={MailWarning} tone="blue"/>
     </section>
 
