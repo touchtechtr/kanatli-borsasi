@@ -16,6 +16,7 @@ import {
 
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui/PlatformUI'
 
 import {
 
@@ -703,63 +704,18 @@ export default function AdminTradeOffersPage() {
 
   return (
 
-    <main className="min-h-screen bg-slate-50 p-5 text-slate-800 md:p-10">
+    <main className="ui-page-shell text-slate-800">
 
       <div className="mx-auto max-w-7xl space-y-6">
 
-        <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
-
-          <div>
-
-            <div className="flex items-center gap-2 text-emerald-700">
-
-              <ShieldCheck className="h-5 w-5" />
-
-              <span className="text-xs font-bold uppercase tracking-wider">
-
-                Güvenli ticaret denetimi
-
-              </span>
-
-            </div>
-
-            <h1 className="mt-2 text-2xl font-bold text-slate-950">
-
-              Ticari Teklifler
-
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-500">
-
-              Teklifleri satıcıya iletilmeden önce inceleyin ve platform
-
-              komisyonunu takip edin.
-
-            </p>
-
-          </div>
-
-
-
-          <button
-
-            type="button"
-
-            onClick={() => void fetchPage()}
-
-            disabled={loading}
-
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-
-          >
-
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-
-            Yenile
-
-          </button>
-
-        </div>
+        <PageHeader
+          eyebrow="Güvenli ticaret denetimi"
+          title="Ticari Teklifler"
+          description="Teklifleri satıcıya iletilmeden önce inceleyin; komisyon, taraf ve işlem durumunu birlikte takip edin."
+          icon={ShieldCheck}
+          tone="violet"
+          actions={<button type="button" onClick={() => void fetchPage()} disabled={loading} className="ui-button ui-button--secondary"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Yenile</button>}
+        />
 
 
 
