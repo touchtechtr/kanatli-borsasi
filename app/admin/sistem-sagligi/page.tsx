@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Activity, AlertTriangle, ArrowRight, BadgeCheck, Building2, CheckCircle2, Database, MailWarning, RefreshCw, ShieldCheck, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { MetricCard, PageHeader, PageShell, SurfaceCard } from "@/components/ui/PlatformUI";
 
 type HealthData = {
   checked_at: string;
@@ -75,26 +76,25 @@ export default function AdminSystemHealthPage(){
   const guardCount=data?Object.values(data.required_guards).filter(Boolean).length:0;
   const guardTotal=data?Object.keys(data.required_guards).length:0;
 
-  return <main className="mx-auto max-w-[1500px] space-y-6 p-4 md:p-7">
-    <header className="overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_top_right,#7c3aed_0%,#312e81_35%,#0f172a_78%)] p-6 text-white shadow-xl md:p-8">
-      <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-        <div><div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold ring-1 ring-white/15"><ShieldCheck className="h-4 w-4 text-violet-200"/>Platform bütünlük denetimi</div>
-        <h1 className="mt-4 text-3xl font-black md:text-4xl">Sistem Sağlığı</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">Yetkilendirme, ödeme, cüzdan, kesimhane teslimatı ve e-posta kuyruğundaki tutarsızlıkları tek ekrandan izleyin.</p></div>
-        <button type="button" onClick={()=>void load()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-extrabold text-slate-900 transition hover:bg-violet-50 disabled:opacity-60"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/>Yeniden denetle</button>
-      </div>
-    </header>
+  return <PageShell>
+    <PageHeader
+      eyebrow="Platform bütünlük denetimi"
+      title="Sistem Sağlığı"
+      description="Yetkilendirme, ödeme, cüzdan, kesimhane teslimatı ve e-posta kuyruğundaki tutarsızlıkları tek ekrandan izleyin."
+      icon={ShieldCheck}
+      actions={<button type="button" onClick={()=>void load()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white transition hover:opacity-90 disabled:opacity-60"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/>Yeniden denetle</button>}
+    />
 
     {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-semibold text-red-700">Sistem sağlığı yüklenemedi: {error}</div>}
 
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <SummaryCard title="Bütünlük sorunu" value={loading?"—":String(issueCount)} description={issueCount?"İncelenmesi gereken kayıt":"Kritik tutarsızlık bulunmadı"} icon={issueCount?AlertTriangle:CheckCircle2} tone={issueCount?"amber":"emerald"}/>
-      <SummaryCard title="Yetki kuralı" value={loading?"—":String(data?.authorization.enabled_operation_rules??0)} description="Etkin merkezi işlem kuralı" icon={BadgeCheck} tone="violet"/>
-      <SummaryCard title="Durum koruması" value={loading?"—":guardCount+" / "+guardTotal} description="Gerekli güvenlik fonksiyonları" icon={Database} tone={guardCount===guardTotal?"emerald":"amber"}/>
-      <SummaryCard title="E-posta kuyruğu" value={loading?"—":String(data?.email_queue.pending??0)} description={String(data?.email_queue.failed??0)+" yeniden denenecek hata"} icon={MailWarning} tone="blue"/>
+      <MetricCard label="Bütünlük sorunu" value={loading?"—":String(issueCount)} helper={issueCount?"İncelenmesi gereken kayıt":"Kritik tutarsızlık bulunmadı"} icon={issueCount?AlertTriangle:CheckCircle2} tone={issueCount?"amber":"emerald"}/>
+      <MetricCard label="Yetki kuralı" value={loading?"—":String(data?.authorization.enabled_operation_rules??0)} helper="Etkin merkezi işlem kuralı" icon={BadgeCheck} tone="violet"/>
+      <MetricCard label="Durum koruması" value={loading?"—":guardCount+" / "+guardTotal} helper="Gerekli güvenlik fonksiyonları" icon={Database} tone={guardCount===guardTotal?"emerald":"amber"}/>
+      <MetricCard label="E-posta kuyruğu" value={loading?"—":String(data?.email_queue.pending??0)} helper={String(data?.email_queue.failed??0)+" yeniden denenecek hata"} icon={MailWarning} tone="blue"/>
     </section>
 
-    <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+    <SurfaceCard>
       <div className="flex flex-col gap-2 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-xs font-black uppercase tracking-[.16em] text-violet-600">Otomatik kontroller</p><h2 className="mt-1 text-xl font-black text-slate-900">Kayıt bütünlüğü sonuçları</h2></div>
         {data?.checked_at&&<p className="text-xs font-semibold text-slate-500">Son kontrol: {new Date(data.checked_at.endsWith("Z")||data.checked_at.includes("+",10)?data.checked_at:data.checked_at+"Z").toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}</p>}
@@ -106,20 +106,16 @@ export default function AdminSystemHealthPage(){
           <span className="mt-1 block text-xs leading-5 text-slate-600">{check.description}</span><span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-slate-700">İlgili modülü aç<ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5"/></span></span>
         </Link>)}
       </div>
-    </section>
+    </SurfaceCard>
 
     <section className="grid gap-4 md:grid-cols-3">
       <QuickLink href="/admin/finans" title="Finans denetimi" description="Ödeme, komisyon ve cüzdan kayıtlarını inceleyin." icon={Wallet}/>
       <QuickLink href="/admin/hareket-kayitlari" title="Hareket kayıtları" description="Durum değişikliklerinin denetim izini görüntüleyin." icon={Activity}/>
       <QuickLink href="/admin/firmalar" title="Şirket bütünlüğü" description="Sahiplik, faaliyet ve şirket durumlarını kontrol edin." icon={Building2}/>
     </section>
-  </main>
+  </PageShell>
 }
 
-function SummaryCard({title,value,description,icon:Icon,tone}:{title:string;value:string;description:string;icon:typeof ShieldCheck;tone:"emerald"|"amber"|"violet"|"blue"}){
-  const tones={emerald:"border-emerald-200 bg-emerald-50 text-emerald-700",amber:"border-amber-200 bg-amber-50 text-amber-700",violet:"border-violet-200 bg-violet-50 text-violet-700",blue:"border-blue-200 bg-blue-50 text-blue-700"};
-  return <article className={"rounded-2xl border p-5 "+tones[tone]}><div className="flex items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-[.12em]">{title}</p><Icon className="h-5 w-5"/></div><p className="mt-4 text-3xl font-black text-slate-950">{value}</p><p className="mt-1 text-xs font-semibold text-slate-600">{description}</p></article>
-}
 function QuickLink({href,title,description,icon:Icon}:{href:string;title:string;description:string;icon:typeof ShieldCheck}){
   return <Link href={href} className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300"><span className="rounded-xl bg-violet-100 p-2.5 text-violet-700"><Icon className="h-5 w-5"/></span><span className="min-w-0 flex-1"><span className="font-extrabold text-slate-900">{title}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span></span><ArrowRight className="mt-1 h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-violet-600"/></Link>
 }
