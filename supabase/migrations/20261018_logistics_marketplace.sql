@@ -37,6 +37,18 @@ on conflict(activity_code,code) do update set
  accepted_mime_types=excluded.accepted_mime_types,max_file_size_mb=excluded.max_file_size_mb,
  sort_order=excluded.sort_order;
 
+-- Eski iki lojistik etiketi yeni birleşik faaliyet modeline taşınır.
+insert into public.company_activities(company_id,activity_code,status,source_application_id,approved_by,activated_at,expires_at,suspension_reason,updated_at)
+select company_id,'logistics_operator',status,source_application_id,approved_by,activated_at,expires_at,suspension_reason,updated_at
+from public.company_activities
+where activity_code in ('animal_logistics','feed_logistics')
+on conflict(company_id,activity_code) do update set
+ status=excluded.status,expires_at=excluded.expires_at,updated_at=timezone('utc',now());
+
+update public.activity_types
+set enabled=false,updated_at=timezone('utc',now())
+where code in ('animal_logistics','feed_logistics');
+
 create table if not exists public.logistics_vehicles (
  id uuid primary key default gen_random_uuid(),
  company_id uuid not null references public.companies(id) on delete cascade,
