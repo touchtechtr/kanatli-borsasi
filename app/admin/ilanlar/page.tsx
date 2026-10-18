@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Download, ExternalLink, RefreshCw, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader, PageShell } from "@/components/ui/PlatformUI";
 
 type ListingType = "listings" | "feed_listings" | "livestock_listings";
 type ListingRow = {
@@ -199,35 +200,25 @@ export default function AdminListingsPage() {
   const statuses = [...new Set(rows.map((row) => row.status))];
 
   return (
-    <main className="min-h-screen bg-slate-50 p-5 md:p-10">
-      <div className="mx-auto max-w-7xl space-y-5">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-emerald-700">
-              İlan yönetimi
-            </p>
-            <h1 className="text-3xl font-bold text-slate-950">Tüm İlanlar</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Üç ilan kaynağını tek merkezden inceleyin.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => void loadListings()}
-              className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm font-bold"
-            >
-              <RefreshCw className="h-4 w-4" /> Yenile
-            </button>
-            <button
-              onClick={exportCsv}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"
-            >
-              <Download className="h-4 w-4" /> CSV indir
-            </button>
-          </div>
-        </header>
+    <PageShell className="space-y-5">
+        <PageHeader
+          eyebrow="İlan yönetimi"
+          title="Tüm İlanlar"
+          description="Üç ilan kaynağını tek merkezden inceleyin, filtreleyin ve moderasyon durumlarını yönetin."
+          icon={Search}
+          actions={
+            <>
+              <button onClick={() => void loadListings()} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold">
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Yenile
+              </button>
+              <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white">
+                <Download className="h-4 w-4" /> CSV indir
+              </button>
+            </>
+          }
+        />
 
-        <section className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-6">
+        <section className="ui-surface-card grid gap-3 p-4 md:grid-cols-6">
           <label className="relative md:col-span-2">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input
@@ -372,7 +363,6 @@ export default function AdminListingsPage() {
               ))}
           </div>
         </section>
-      </div>
-    </main>
+    </PageShell>
   );
 }
