@@ -14,6 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PlatformUI";
 
 type ListingType = "listings" | "feed_listings" | "livestock_listings";
 
@@ -240,34 +241,9 @@ export default function MyListingsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <Link
-              href="/profil"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:underline"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Hesap merkezine dön
-            </Link>
-            <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">
-              İlan yönetimi
-            </p>
-            <h1 className="mt-1 text-3xl font-extrabold text-slate-900">
-              İlanlarım
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Tüm ilanlarınızı, moderasyon durumlarını ve öne çıkarma
-              paketlerini tek yerden yönetin.
-            </p>
-          </div>
-          <Link
-            href="/?newListing=1"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700"
-          >
-            <Plus className="h-4 w-4" /> Yeni ilan ver
-          </Link>
-        </header>
+        <PageHeader eyebrow="İlan ve stok yönetimi" title="İlanlarım" description="İlanlarınızı, kalan miktarı, moderasyon durumunu ve görünürlük paketlerini tek yerden yönetin." icon={PackageSearch} tone="emerald" actions={<><Link href="/profil" className="ui-button ui-button--secondary"><ArrowLeft className="h-4 w-4"/>Hesap merkezi</Link><Link href="/ilan/yeni" className="ui-button ui-button--primary"><Plus className="h-4 w-4"/>Yeni ilan ver</Link></>} />
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat label="Toplam ilan" value={counts.all} />
