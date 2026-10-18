@@ -225,7 +225,7 @@ export default function AdminListingsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Başlık, firma veya şehir ara"
-              className="w-full rounded-xl border py-2.5 pl-10 pr-3 text-sm"
+              className="ui-input pl-10"
             />
           </label>
           <select
@@ -233,7 +233,7 @@ export default function AdminListingsPage() {
             onChange={(e) =>
               setTypeFilter(e.target.value as "all" | ListingType)
             }
-            className="rounded-xl border px-3 text-sm"
+            className="ui-input"
           >
             <option value="all">Tüm türler</option>
             {Object.entries(TYPE_LABELS).map(([value, label]) => (
@@ -245,7 +245,7 @@ export default function AdminListingsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-xl border px-3 text-sm"
+            className="ui-input"
           >
             <option value="all">Tüm durumlar</option>
             {statuses.map((status) => (
@@ -255,7 +255,7 @@ export default function AdminListingsPage() {
           <select
             value={moderationFilter}
             onChange={(e) => setModerationFilter(e.target.value)}
-            className="rounded-xl border px-3 text-sm"
+            className="ui-input"
           >
             <option value="all">Tüm incelemeler</option>
             <option value="inceleme_bekliyor">İnceleme bekleyen</option>
