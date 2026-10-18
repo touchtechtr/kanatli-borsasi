@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Bell, CheckCheck, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeader } from '@/components/ui/PlatformUI'
 
 type Notification = { id: string; title: string; message: string; link: string | null; read_at: string | null; created_at: string }
 
@@ -37,14 +38,8 @@ export default function NotificationsPage() {
   const unread = items.filter((item) => !item.read_at).length
 
   return (
-    <main className="mx-auto max-w-5xl space-y-5">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><p className="text-sm font-semibold text-emerald-600">Hesap merkezi</p><h1 className="mt-1 text-3xl font-bold text-slate-900">Bildirimler</h1><p className="mt-1 text-sm text-slate-500">Başvuru, ilan ve ticari işlemlerinizdeki gelişmeleri takip edin.</p></div>
-        <div className="flex gap-2">
-          <button onClick={() => void markAll()} disabled={!unread} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold disabled:opacity-50"><CheckCheck className="h-4 w-4" /> Tümünü okundu yap</button>
-          <button onClick={() => void load()} className="rounded-xl bg-slate-900 p-2.5 text-white" aria-label="Bildirimleri yenile"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} /></button>
-        </div>
-      </header>
+    <main className="ui-page-shell">
+      <PageHeader eyebrow="Hesap ve işlem bildirimleri" title="Bildirimler" description="Başvuru, ilan ve ticari işlemlerinizdeki gelişmeleri zamanında takip edin." icon={Bell} tone="amber" actions={<><button onClick={() => void markAll()} disabled={!unread} className="ui-button ui-button--secondary"><CheckCheck className="h-4 w-4"/>Tümünü okundu yap</button><button onClick={() => void load()} className="ui-button ui-button--primary" aria-label="Bildirimleri yenile"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}/></button></>} />
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
       <p className="text-sm font-semibold text-slate-600">{unread} okunmamış · {items.length} bildirim</p>
