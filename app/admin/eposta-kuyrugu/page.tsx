@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertCircle, CheckCircle2, Clock3, Mail, RefreshCw, RotateCcw, Search, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeader } from '@/components/ui/PlatformUI'
 import { dispatchNotificationEmails } from '@/lib/dispatch-notification-emails'
 
 type MailRow = {
@@ -57,8 +58,8 @@ export default function AdminEmailQueuePage() {
     setBusy(null)
   }
 
-  return <main className="min-h-screen bg-slate-50 p-5 md:p-8"><div className="mx-auto max-w-7xl space-y-6">
-    <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-sm font-semibold text-emerald-600">İletişim denetimi</p><h1 className="mt-1 text-3xl font-extrabold text-slate-900">E-posta Kuyruğu</h1><p className="mt-2 text-sm text-slate-500">Bildirim e-postalarının teslim durumunu, hata nedenlerini ve yeniden gönderimlerini yönetin.</p></div><div className="flex gap-2"><button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-bold"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Yenile</button><button onClick={() => void dispatch()} disabled={busy !== null} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Send className="h-4 w-4" />Kuyruğu çalıştır</button></div></header>
+  return <main className="ui-page-shell"><div className="mx-auto max-w-7xl space-y-6">
+    <PageHeader eyebrow="İletişim ve teslimat denetimi" title="E-posta Kuyruğu" description="Bildirim e-postalarının teslim durumunu, hata nedenlerini ve yeniden gönderimlerini yönetin." icon={Mail} tone="emerald" actions={<><button onClick={() => void load()} className="ui-button ui-button--secondary"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Yenile</button><button onClick={() => void dispatch()} disabled={busy !== null} className="ui-button ui-button--primary"><Send className="h-4 w-4" />Kuyruğu çalıştır</button></>} />
     <section className="grid gap-3 sm:grid-cols-3"><Card label="Bekleyen" value={counts('beklemede')} icon={Clock3} tone="yellow" /><Card label="Gönderilen" value={counts('gonderildi')} icon={CheckCircle2} tone="green" /><Card label="Başarısız" value={counts('hata')} icon={AlertCircle} tone="red" /></section>
     {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
     <section className="rounded-2xl border bg-white p-4 shadow-sm"><div className="grid gap-3 md:grid-cols-[1fr_220px]"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Alıcı, başlık, içerik veya hata ara..." className="w-full rounded-xl border bg-slate-50 py-2.5 pl-10 pr-3 text-sm" /></div><select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-xl border px-3 text-sm"><option value="tumu">Tüm durumlar</option><option value="beklemede">Bekleyen</option><option value="gonderildi">Gönderilen</option><option value="hata">Başarısız</option></select></div><p className="mt-3 text-xs text-slate-500">{filtered.length} / {rows.length} kayıt</p></section>
