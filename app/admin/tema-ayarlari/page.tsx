@@ -456,7 +456,7 @@ export default function AdminThemeSettingsPage() {
         <SectionHeader
           title="Yayın geçmişi"
           description="Önceki tema sürümlerini inceleyin veya tek işlemle yeniden yayınlayın."
-          actions={<StatusBadge tone="slate"><History className="mr-1 h-3 w-3" />{history.length} sürüm</StatusBadge>}
+          actions={<StatusBadge tone="violet"><History className="mr-1 h-3 w-3" />{history.length} sürüm</StatusBadge>}
         />
         {history.length > 0 ? (
           <div className="divide-y divide-slate-100">
