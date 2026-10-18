@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Building2 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PlatformUI'
 import type {
   Company,
   CompanyModerationHistory,
@@ -305,18 +307,15 @@ export default function AdminFirmaOnayPage() {
     : []
 
   return (
-    <main className="p-6 md:p-12">
+    <main className="ui-page-shell">
       <div className="max-w-5xl mx-auto space-y-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <h1 className="text-xl font-bold text-slate-900">
-            Firma Onay Paneli
-          </h1>
-
-          <p className="text-sm text-slate-500 mt-1">
-            Firma başvurularını inceleyin, onaylayın veya neden
-            belirterek reddedin.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Firma güven ve uygunluk"
+          title="Firma Onay Paneli"
+          description="Firma başvurularını, kimlik bilgilerini ve uygunluk durumlarını inceleyin; kararların tamamını kayıt altında yönetin."
+          icon={Building2}
+          tone="violet"
+        />
 
         <div className="flex gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
           {(
