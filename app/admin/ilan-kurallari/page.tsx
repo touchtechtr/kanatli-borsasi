@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PlatformUI";
 
 type Settings = {
   manual_review_all: boolean;
@@ -117,20 +118,9 @@ export default function ListingRulesPage() {
     );
 
   return (
-    <main className="min-h-screen bg-slate-50 p-5 md:p-10">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-5xl space-y-6">
-        <header>
-          <p className="text-sm font-semibold text-emerald-700">
-            İlan güvenliği
-          </p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-950">
-            Moderasyon Kuralları
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Riskli ilanların hangi koşullarda yönetici incelemesine düşeceğini
-            yönetin.
-          </p>
-        </header>
+        <PageHeader eyebrow="İlan güvenliği ve risk politikası" title="Moderasyon Kuralları" description="Riskli ilanların hangi koşullarda otomatik veya yönetici incelemesine düşeceğini yönetin." icon={ShieldCheck} tone="amber" />
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
