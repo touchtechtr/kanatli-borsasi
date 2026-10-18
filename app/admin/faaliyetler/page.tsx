@@ -328,7 +328,7 @@ export default function AdminActivitiesPage() {
 
   return (
     <main className="ui-page-shell">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         <PageHeader
           eyebrow="Yetki ve belge yönetimi"
           title="Şirket Faaliyetleri"
@@ -351,7 +351,7 @@ export default function AdminActivitiesPage() {
             tone="amber"
           />
         </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="ui-surface-card">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
             <Filter className="h-4 w-4 text-emerald-600" />
             Süzgeç ve sıralama
@@ -363,13 +363,13 @@ export default function AdminActivitiesPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Şirket, şehir veya vergi no"
-                className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm"
+                className="ui-input pl-9"
               />
             </label>
             <select
               value={activityFilter}
               onChange={(e) => setActivityFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+              className="ui-input"
             >
               <option value="all">Tüm faaliyetler</option>
               {activities.map((x) => (
@@ -381,7 +381,7 @@ export default function AdminActivitiesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+              className="ui-input"
             >
               <option value="all">Tüm durumlar</option>
               <option value="active">Aktif faaliyeti olanlar</option>
@@ -393,7 +393,7 @@ export default function AdminActivitiesPage() {
             <select
               value={sortMode}
               onChange={(e) => setSortMode(e.target.value as SortMode)}
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+              className="ui-input"
             >
               <option value="pending">En çok bekleyen başvuru</option>
               <option value="active">En çok aktif faaliyet</option>
