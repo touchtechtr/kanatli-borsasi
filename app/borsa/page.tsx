@@ -38,7 +38,7 @@ export default function BorsaPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Canlı Piyasa ve Borsa</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Anlık tarım ve yem hammaddeleri fiyat akışı.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Tarım ve yem hammaddeleri için referans fiyat görünümü.</p>
         </div>
         
         {/* Arama Çubuğu */}
@@ -52,6 +52,10 @@ export default function BorsaPage() {
             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+        <strong>Referans veri:</strong> Bu ekrandaki fiyatlar şu anda örnek gösterim verileridir; gerçek zamanlı borsa veya resmî piyasa verisi değildir. Canlı veri sağlayıcısı bağlandığında kaynak ve güncelleme zamanı ayrıca gösterilecektir.
       </div>
 
       {/* Tablo Kartı */}
