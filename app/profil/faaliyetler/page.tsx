@@ -10,6 +10,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PlatformUI";
 
 type ActivityType = {
   code: string;
@@ -274,28 +275,8 @@ export default function CompanyActivitiesPage() {
   );
 
   return (
-    <main className="space-y-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-emerald-600">
-            Yetki ve belge merkezi
-          </p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">
-            Faaliyetlerim ve Belgelerim
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-500">
-            Firmanız birden fazla alanda çalışabilir. Her faaliyet ayrı
-            belgelenir ve yönetici tarafından bağımsız olarak onaylanır.
-          </p>
-        </div>
-        <button
-          onClick={() => void load()}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Yenile
-        </button>
-      </header>
+    <main className="ui-page-shell">
+      <PageHeader eyebrow="Yetki ve belge merkezi" title="Faaliyetlerim ve Belgelerim" description="Her faaliyet için gereken resmî belgeleri yükleyin ve bağımsız onay sürecini takip edin." icon={BadgeCheck} tone="emerald" actions={<button onClick={() => void load()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4" />Yenile</button>} />
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
