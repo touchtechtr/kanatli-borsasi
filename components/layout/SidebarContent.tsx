@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   TrendingUp,
   UserCircle,
-} from "lucide-react";import { createClient } from "@/lib/supabase/client";
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { ROLE_LABELS } from "@/constants/company";
 import type { CompanyRole } from "@/types/company";
 
@@ -42,6 +43,14 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     { href: "/profil", label: "Hesap Merkezi", icon: UserCircle, exact: true },
   ] },
 ];
+
+const ADMIN_ROLE_LABELS: Record<string, string> = {
+  super_admin: "Süper Yönetici",
+  moderator: "Moderatör",
+  finance: "Finans Yöneticisi",
+  operations: "Operasyon Yöneticisi",
+  auditor: "Salt Okunur Denetçi",
+};
 
 const GUEST_ACCOUNT: SidebarAccount = { authenticated: false, isAdmin: false, adminRole: null, name: "Misafir", label: "Giriş yapılmadı", initials: "M" };
 
