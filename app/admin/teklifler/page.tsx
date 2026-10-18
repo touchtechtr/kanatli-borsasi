@@ -17,6 +17,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { PageHeader } from '@/components/ui/PlatformUI'
+import DecisionMessagePicker from '@/components/admin/DecisionMessagePicker'
 
 import {
 
@@ -221,6 +222,10 @@ export default function AdminTradeOffersPage() {
   const [savingRate, setSavingRate] = useState(false)
 
   const [processingId, setProcessingId] = useState<string | null>(null)
+
+  const [decision, setDecision] = useState<{ offer: TradeOffer; status: 'onaylandi' | 'reddedildi' } | null>(null)
+
+  const [decisionNote, setDecisionNote] = useState('')
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -456,106 +461,43 @@ export default function AdminTradeOffersPage() {
 
 
 
-  const reviewOffer = async (
-
-    offer: TradeOffer,
-
-    nextStatus: 'onaylandi' | 'reddedildi'
-
-  ) => {
-
-    let note: string | null = null
-
-
-
-    if (nextStatus === 'reddedildi') {
-
-      const enteredNote = window.prompt(
-
-        `${offer.product_title} teklifi için ret nedenini yazın:`
-
-      )
-
-
-
-      if (enteredNote === null) return
-
-
-
-      note = enteredNote.trim()
-
-      if (!note) {
-
-        setError('Admin ret nedeni zorunludur.')
-
-        return
-
-      }
-
-    } else {
-
-      const confirmed = window.confirm(
-
-        `${offer.product_title} teklifini satıcıya iletmek üzere onaylıyor musunuz?`
-
-      )
-
-      if (!confirmed) return
-
+  const reviewOffer = async () => {
+    if (!decision) return
+    const note = decisionNote.trim()
+    if (!note) {
+      setError('Kullanıcıya iletilecek karar açıklaması zorunludur.')
+      return
     }
 
-
-
+    const offer = decision.offer
+    const nextStatus = decision.status
     setProcessingId(offer.id)
-
     setError(null)
-
     setSuccess(null)
 
-
-
     const { error: updateError } = await supabase
-
       .from('trade_offers')
-
       .update({
-
         admin_status: nextStatus,
-
         admin_note: note,
-
       })
-
       .eq('id', offer.id)
-
       .eq('admin_status', 'beklemede')
 
-
-
     if (updateError) {
-
       setError('Teklif incelenemedi: ' + updateError.message)
-
     } else {
-
       setSuccess(
-
         nextStatus === 'onaylandi'
-
-          ? 'Teklif onaylandı ve satıcının ekranına iletildi.'
-
-          : 'Teklif admin tarafından reddedildi.'
-
+          ? 'Teklif onaylandı ve karar açıklamasıyla satıcıya iletildi.'
+          : 'Teklif karar açıklamasıyla reddedildi.'
       )
-
+      setDecision(null)
+      setDecisionNote('')
       await fetchPage()
-
     }
 
-
-
     setProcessingId(null)
-
   }
 
 
@@ -1187,7 +1129,7 @@ export default function AdminTradeOffersPage() {
 
                               type="button"
 
-                              onClick={() => void reviewOffer(offer, 'onaylandi')}
+                              onClick={() => { setDecision({ offer, status: 'onaylandi' }); setDecisionNote('') }}
 
                               disabled={processingId === offer.id}
 
@@ -1203,7 +1145,7 @@ export default function AdminTradeOffersPage() {
 
                               type="button"
 
-                              onClick={() => void reviewOffer(offer, 'reddedildi')}
+                              onClick={() => { setDecision({ offer, status: 'reddedildi' }); setDecisionNote('') }}
 
                               disabled={processingId === offer.id}
 
@@ -1365,7 +1307,48 @@ export default function AdminTradeOffersPage() {
 
       </div>
 
-    </main>
+    
+      {decision && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="offer-decision-title" className="w-full max-w-xl rounded-3xl border border-white/70 bg-white p-6 shadow-2xl">
+            <p className="text-xs font-black uppercase tracking-[.16em] text-violet-600">Teklif kararı</p>
+            <h2 id="offer-decision-title" className="mt-2 text-xl font-black text-slate-950">
+              {decision.status === 'onaylandi' ? 'Teklifi onayla' : 'Teklifi reddet'}
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">{decision.offer.product_title}</p>
+            <div className="mt-5">
+              <DecisionMessagePicker
+                action={decision.status === 'onaylandi' ? 'onayla' : 'reddet'}
+                value={decisionNote}
+                onChange={setDecisionNote}
+                disabled={processingId !== null}
+              />
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => { setDecision(null); setDecisionNote('') }}
+                disabled={processingId !== null}
+                className="ui-button ui-button--secondary px-4 py-2.5 text-sm font-bold"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={() => void reviewOffer()}
+                disabled={processingId !== null || !decisionNote.trim()}
+                className={decision.status === 'onaylandi'
+                  ? 'ui-button ui-button--primary px-4 py-2.5 text-sm font-bold disabled:opacity-50'
+                  : 'rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50'}
+              >
+                {processingId ? 'İşleniyor...' : decision.status === 'onaylandi' ? 'Onayla ve ilet' : 'Reddet ve bildir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+</main>
 
   )
 
