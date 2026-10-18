@@ -62,9 +62,12 @@ begin
   select count(*)::integer
     into v_anon_mutations
   from information_schema.role_table_grants g
+  join pg_class c on c.relname=g.table_name
+  join pg_namespace n on n.oid=c.relnamespace and n.nspname=g.table_schema
   where g.table_schema = 'public'
     and g.grantee = 'anon'
-    and g.privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE');
+    and g.privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE')
+    and c.relrowsecurity = false;
 
   if to_regclass('public.notification_email_outbox') is not null then
     execute $q$
