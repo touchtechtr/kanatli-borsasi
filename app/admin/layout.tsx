@@ -209,7 +209,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div className="flex items-center gap-2">
               {pathname !== "/admin" && <Link href="/admin" className="hidden items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-800 sm:inline-flex"><LayoutDashboard className="h-4 w-4" />Yönetim Merkezi</Link>}
-              <Link href="/" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><ExternalLink className="h-4 w-4" /><span className="hidden md:inline">Ana site</span></Link>
+              <Link href="/?sitePreview=1" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><ExternalLink className="h-4 w-4" /><span className="hidden md:inline">Siteyi önizle</span></Link>
               <button type="button" onClick={() => void signOut()} disabled={signingOut} className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"><LogOut className="h-4 w-4" /><span className="hidden md:inline">{signingOut ? "Çıkılıyor…" : "Çıkış"}</span></button>
             </div>
           </div>
