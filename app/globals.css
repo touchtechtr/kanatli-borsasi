@@ -489,3 +489,71 @@
 
 /* Profile layout already owns its responsive outer spacing. */
 .profile-vip-content .ui-page-shell { max-width: none; padding: 0; }
+
+
+/* Shared marketplace page family: preserves each module's behavior while
+   unifying surfaces, controls, elevation and responsive visual rhythm. */
+.marketplace-page {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 92% 2%, rgba(5,150,105,.10), transparent 28rem),
+    radial-gradient(circle at 8% 35%, rgba(217,119,6,.07), transparent 30rem),
+    linear-gradient(180deg,#f8fafc 0%,#f4f8f6 52%,#eef5f1 100%) !important;
+}
+.marketplace-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .22;
+  background-image:
+    linear-gradient(rgba(148,163,184,.13) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(148,163,184,.13) 1px,transparent 1px);
+  background-size: 38px 38px;
+  mask-image: linear-gradient(to bottom,black,transparent 72%);
+}
+.marketplace-page section[class*="bg-white"],
+.marketplace-page article[class*="bg-white"],
+.marketplace-page div[class*="bg-white"][class*="rounded"] {
+  border-color: rgba(203,213,225,.78) !important;
+  box-shadow:
+    0 20px 48px -38px rgba(6,78,59,.48),
+    inset 0 1px 0 rgba(255,255,255,.92);
+}
+.marketplace-page article,
+.marketplace-page section[class*="rounded"] {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.marketplace-page article:hover {
+  border-color: rgba(5,150,105,.28) !important;
+  box-shadow: 0 28px 62px -42px rgba(5,150,105,.48);
+}
+.marketplace-page input,
+.marketplace-page select,
+.marketplace-page textarea {
+  border-color: rgba(203,213,225,.9);
+  background: rgba(255,255,255,.94);
+  box-shadow: inset 0 1px 2px rgba(15,23,42,.035);
+}
+.marketplace-page input:focus,
+.marketplace-page select:focus,
+.marketplace-page textarea:focus {
+  border-color: rgb(16 185 129);
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(16,185,129,.11);
+}
+.marketplace-page button,
+.marketplace-page a[class*="rounded"] {
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.marketplace-page button:not(:disabled):hover,
+.marketplace-page a[class*="rounded"]:hover { transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .marketplace-page article,
+  .marketplace-page button,
+  .marketplace-page a[class*="rounded"] { transition: none; }
+  .marketplace-page button:not(:disabled):hover,
+  .marketplace-page a[class*="rounded"]:hover { transform: none; }
+}
