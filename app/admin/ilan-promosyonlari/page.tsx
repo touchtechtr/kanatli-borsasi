@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/ui/PlatformUI";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 
 type Promotion = {
@@ -157,28 +158,9 @@ export default function AdminListingPromotionsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 md:p-10">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-600">
-              Gelir ve görünürlük
-            </p>
-            <h1 className="mt-1 text-3xl font-extrabold text-slate-900">
-              İlan Öne Çıkarma
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Paket taleplerini ve ödeme doğrulamasını yönetin.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void loadRows()}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
-          >
-            <RefreshCw className="h-4 w-4" /> Yenile
-          </button>
-        </header>
+        <PageHeader eyebrow="Gelir ve görünürlük denetimi" title="İlan Öne Çıkarma" description="Vitrin paketlerini, ödeme doğrulamasını ve yayın sürelerini tek merkezden yönetin." icon={Crown} tone="amber" actions={<button type="button" onClick={() => void loadRows()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4" />Yenile</button>} />
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Stat label="Onay bekleyen" value={stats.pending} tone="amber" />
