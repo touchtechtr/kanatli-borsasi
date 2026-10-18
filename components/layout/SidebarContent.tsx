@@ -3,8 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BadgeCheck, Bell, BookOpenText, Building2, CalendarCheck2, CircleDollarSign, ClipboardCheck, Crown, Factory, Feather, FileSignature, Handshake, Landmark, LayoutDashboard, LogOut, MailWarning, Microscope, PackageSearch, ScrollText, Settings2, ShieldCheck, Tags, TrendingUp, Truck, UserCircle, UserCog, Users } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import {
+  BookOpenText,
+  ClipboardCheck,
+  Factory,
+  Feather,
+  FileSignature,
+  Handshake,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  PackageSearch,
+  ShieldCheck,
+  TrendingUp,
+  UserCircle,
+} from "lucide-react";import { createClient } from "@/lib/supabase/client";
 import { ROLE_LABELS } from "@/constants/company";
 import type { CompanyRole } from "@/types/company";
 
@@ -30,41 +43,6 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   ] },
 ];
 
-const ADMIN_ROLE_LABELS: Record<string, string> = {
-  super_admin: "Süper Yönetici", moderator: "Moderatör", finance: "Finans Yöneticisi",
-  operations: "Operasyon Yöneticisi", auditor: "Salt Okunur Denetçi",
-};
-const ADMIN_ROLE_PATHS: Record<string, string[]> = {
-  moderator: ["/admin", "/admin/hareket-kayitlari", "/admin/firmalar", "/admin/faaliyetler", "/admin/ilanlar", "/admin/ilan-promosyonlari", "/admin/ilan-kurallari", "/admin/teklifler", "/admin/kullanicilar"],
-  finance: ["/admin", "/admin/hareket-kayitlari", "/admin/finans", "/admin/teklifler", "/admin/ilan-promosyonlari", "/admin/kesimhane-alimlari"],
-  operations: ["/admin", "/admin/hareket-kayitlari", "/admin/randevular", "/admin/ekspertiz", "/admin/sozlesmeler", "/admin/kesimhaneler", "/admin/kesimhane-alimlari", "/admin/eposta-kuyrugu"],
-  auditor: ["/admin", "/admin/hareket-kayitlari"],
-};
-const ADMIN_GROUPS: { title: string; items: NavItem[] }[] = [
-  { title: "İnceleme ve ticaret", items: [
-    { href: "/admin/firmalar", label: "Firmalar", icon: Building2 },
-    { href: "/admin/faaliyetler", label: "Faaliyetler", icon: BadgeCheck },
-    { href: "/admin/ilanlar", label: "İlanlar", icon: Activity },
-    { href: "/admin/teklifler", label: "Teklifler", icon: Tags },
-    { href: "/admin/ilan-promosyonlari", label: "Öne Çıkarma", icon: Crown },
-    { href: "/admin/ilan-kurallari", label: "İlan Kuralları", icon: Settings2 },
-  ] },
-  { title: "Operasyon", items: [
-    { href: "/admin/randevular", label: "Randevular", icon: CalendarCheck2 },
-    { href: "/admin/ekspertiz", label: "Ekspertiz", icon: Microscope },
-    { href: "/admin/sozlesmeler", label: "Sözleşmeler", icon: FileSignature },
-    { href: "/admin/kesimhaneler", label: "Kesimhaneler", icon: Factory },
-    { href: "/admin/kesimhane-alimlari", label: "Kesimhane Alımları", icon: Truck },
-  ] },
-  { title: "Finans ve sistem", items: [
-    { href: "/admin/finans", label: "Finans ve Ödemeler", icon: CircleDollarSign },
-    { href: "/admin/kullanicilar", label: "Kullanıcılar", icon: Users },
-    { href: "/admin/personel", label: "Yönetim Personeli", icon: UserCog },
-    { href: "/admin/bildirimler", label: "Bildirimler", icon: Bell },
-    { href: "/admin/eposta-kuyrugu", label: "E-posta Kuyruğu", icon: MailWarning },
-    { href: "/admin/hareket-kayitlari", label: "Hareket Kayıtları", icon: ScrollText },
-  ] },
-];
 const GUEST_ACCOUNT: SidebarAccount = { authenticated: false, isAdmin: false, adminRole: null, name: "Misafir", label: "Giriş yapılmadı", initials: "M" };
 
 export default function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
