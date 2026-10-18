@@ -4,14 +4,21 @@ import Link from "next/link";
 import { ArrowRight,MapPin,PackageSearch,Plus,RefreshCw,Truck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { EmptyState,MetricCard,PageHeader,PageShell,StatusBadge,SurfaceCard } from "@/components/ui/PlatformUI";
-type Listing={id:string;title:string;capability:string;origin_city:string;destination_city:string|null;service_area:string|null;available_from:string;available_to:string|null;price:number|null;price_unit:string|null;description:string|null;created_at:string;companies:{name:string}|null;logistics_vehicles:{plate:string;vehicle_type:string;capacity:number;capacity_unit:string}|null};
-type Request={id:string;title:string;cargo_type:string;origin_city:string;destination_city:string;pickup_date:string;quantity:number;quantity_unit:string;description:string|null;created_at:string;companies:{name:string}|null};
+type Listing={id:string;company_id:string;title:string;capability:string;origin_city:string;destination_city:string|null;service_area:string|null;available_from:string;available_to:string|null;price:number|null;price_unit:string|null;description:string|null;created_at:string;companies:{name:string}|null;logistics_vehicles:{plate:string;vehicle_type:string;capacity:number;capacity_unit:string}|null};
+type Request={id:string;company_id:string;title:string;cargo_type:string;origin_city:string;destination_city:string;pickup_date:string;quantity:number;quantity_unit:string;description:string|null;created_at:string;companies:{name:string}|null};
 export default function LogisticsMarketplace(){
  const supabase=useMemo(()=>createClient(),[]);const[listings,setListings]=useState<Listing[]>([]);const[requests,setRequests]=useState<Request[]>([]);const[tab,setTab]=useState<"services"|"requests">("services");const[error,setError]=useState<string|null>(null);
  const load=useCallback(async()=>{setError(null);const[l,r]=await Promise.all([
-  supabase.from("logistics_listings").select("id,title,capability,origin_city,destination_city,service_area,available_from,available_to,price,price_unit,description,created_at,companies(name),logistics_vehicles(plate,vehicle_type,capacity,capacity_unit)").eq("status","aktif").order("created_at",{ascending:false}),
-  supabase.from("logistics_requests").select("id,title,cargo_type,origin_city,destination_city,pickup_date,quantity,quantity_unit,description,created_at,companies(name)").eq("status","aktif").order("created_at",{ascending:false})
- ]);const e=l.error||r.error;if(e){setError(e.message);return}setListings((l.data??[]) as unknown as Listing[]);setRequests((r.data??[]) as unknown as Request[])},[supabase]);
+  supabase.from("logistics_listings").select("id,company_id,title,capability,origin_city,destination_city,service_area,available_from,available_to,price,price_unit,description,created_at,logistics_vehicles(plate,vehicle_type,capacity,capacity_unit)").eq("status","aktif").order("created_at",{ascending:false}),
+  supabase.from("logistics_requests").select("id,company_id,title,cargo_type,origin_city,destination_city,pickup_date,quantity,quantity_unit,description,created_at").eq("status","aktif").order("created_at",{ascending:false})
+ ]);const e=l.error||r.error;if(e){setError(e.message);return}
+ const rawListings=(l.data??[]) as unknown as Array<Omit<Listing,"companies">>;const rawRequests=(r.data??[]) as unknown as Array<Omit<Request,"companies">>;
+ const companyIds=[...new Set([...rawListings,...rawRequests].map(x=>x.company_id))];
+ const companyResult=companyIds.length?await supabase.from("public_companies").select("id,name").in("id",companyIds):{data:[],error:null};
+ if(companyResult.error){setError(companyResult.error.message);return}
+ const names=new Map((companyResult.data??[]).map(x=>[x.id,x.name]));
+ setListings(rawListings.map(x=>({...x,companies:{name:names.get(x.company_id)||"Onaylı firma"}})));
+ setRequests(rawRequests.map(x=>({...x,companies:{name:names.get(x.company_id)||"Onaylı firma"}})))},[supabase]);
  useEffect(()=>{void load()},[load]);
  return <PageShell>
   <PageHeader eyebrow="Doğrulanmış araçlar · Güvenli taşıma" title="Lojistik Pazarı" icon={Truck} tone="emerald" description="Canlı hayvan, yem, tarımsal ürün ve zirai girdiler için onaylı nakliyecileri ve taşıma taleplerini eşleştirin." actions={<><Link href="/lojistik/yeni" className="ui-button ui-button--primary"><Plus className="h-4 w-4"/>İlan veya talep oluştur</Link><button onClick={()=>void load()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4"/>Yenile</button></>}/>
