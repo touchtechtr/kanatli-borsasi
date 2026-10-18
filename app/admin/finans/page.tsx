@@ -29,6 +29,12 @@ type TradePayment = {
   status: string
   payment_reference: string | null
   admin_note: string | null
+  transfer_status: 'beklemede' | 'emir_verildi' | 'isleniyor' | 'tamamlandi' | 'hata'
+  transfer_reference: string | null
+  transfer_error: string | null
+  transfer_requested_at: string | null
+  transfer_started_at: string | null
+  transfer_completed_at: string | null
   created_at: string
   buyer: CompanyRef
   seller: CompanyRef
@@ -113,7 +119,7 @@ export default function AdminFinancePage() {
       supabase
         .from('trade_payments')
         .select(
-          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name),offer:trade_offers!trade_payments_trade_offer_id_fkey(id,delivery_confirmations:trade_delivery_confirmations(party),delivery_disputes:trade_delivery_disputes(status))',
+          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,transfer_status,transfer_reference,transfer_error,transfer_requested_at,transfer_started_at,transfer_completed_at,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name),offer:trade_offers!trade_payments_trade_offer_id_fkey(id,delivery_confirmations:trade_delivery_confirmations(party),delivery_disputes:trade_delivery_disputes(status))',
         )
         .order('created_at', { ascending: false }),
       supabase
@@ -290,6 +296,34 @@ export default function AdminFinancePage() {
         })
 
     if (reviewError) setError(reviewError.message)
+    else {
+      await dispatchNotificationEmails(supabase)
+      await load()
+    }
+    setBusy(null)
+  }
+
+  const processTransfer = async (row: TradePayment, action: 'isleme_al' | 'tamamla' | 'hata') => {
+    const reference = action === 'tamamla'
+      ? (prompt('Banka veya ödeme kuruluşu işlem referansı:') ?? '').trim()
+      : action === 'isleme_al'
+        ? (prompt('Aktarım takip referansı (isteğe bağlı):') ?? '').trim()
+        : ''
+    if (action === 'tamamla' && !reference) return
+    const note = action === 'hata'
+      ? (prompt('Aktarım hatasını açıklayın:') ?? '').trim()
+      : (prompt('Yönetim notu (isteğe bağlı):') ?? '').trim()
+    if (action === 'hata' && !note) return
+
+    setBusy(row.id)
+    setError(null)
+    const { error: processError } = await supabase.rpc('admin_process_trade_transfer', {
+      p_payment_id: row.id,
+      p_action: action,
+      p_reference: reference || null,
+      p_note: note || null,
+    })
+    if (processError) setError(processError.message)
     else {
       await dispatchNotificationEmails(supabase)
       await load()
@@ -571,14 +605,30 @@ export default function AdminFinancePage() {
                               <span className={sellerConfirmed ? 'rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700' : 'rounded-lg bg-slate-100 px-2 py-1 text-slate-500'}>Satıcı {sellerConfirmed ? 'onaylı' : 'bekleniyor'}</span>
                               <span className={buyerConfirmed ? 'rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700' : 'rounded-lg bg-slate-100 px-2 py-1 text-slate-500'}>Alıcı {buyerConfirmed ? 'onaylı' : 'bekleniyor'}</span>
                             </div>
-                            {sellerConfirmed && buyerConfirmed && !hasOpenDispute && (
+                            {sellerConfirmed && buyerConfirmed && !hasOpenDispute && row.transfer_status === 'beklemede' && (
                               <button
                                 disabled={busy !== null}
                                 onClick={() => void reviewTrade(row, 'saticiya_aktar')}
                                 className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
                               >
-                                Satıcıya aktar
+                                Aktarım emri ver
                               </button>
+                            )}
+                            {row.transfer_status === 'emir_verildi' && (
+                              <button disabled={busy !== null} onClick={() => void processTransfer(row, 'isleme_al')} className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">İşleme al</button>
+                            )}
+                            {row.transfer_status === 'isleniyor' && (
+                              <>
+                                <span className="rounded-xl bg-blue-50 px-3 py-2 text-center text-xs font-bold text-blue-700">Aktarım işleniyor</span>
+                                <button disabled={busy !== null} onClick={() => void processTransfer(row, 'tamamla')} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Aktarımı tamamla</button>
+                                <button disabled={busy !== null} onClick={() => void processTransfer(row, 'hata')} className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 disabled:opacity-50">Hata kaydet</button>
+                              </>
+                            )}
+                            {row.transfer_status === 'hata' && (
+                              <>
+                                <span className="rounded-xl bg-red-50 px-3 py-2 text-center text-xs font-bold text-red-700">{row.transfer_error || 'Aktarım hatası'}</span>
+                                {sellerConfirmed && buyerConfirmed && !hasOpenDispute && <button disabled={busy !== null} onClick={() => void reviewTrade(row, 'saticiya_aktar')} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Yeniden emir ver</button>}
+                              </>
                             )}
                             {hasOpenDispute && <span className="rounded-xl bg-red-50 px-3 py-2 text-center text-xs font-bold text-red-700">Uyuşmazlık incelemede</span>}
                             <button
