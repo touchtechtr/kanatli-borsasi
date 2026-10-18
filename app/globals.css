@@ -485,3 +485,7 @@
   border: 1px solid rgb(254 202 202);
   background: rgb(254 242 242);
 }
+
+
+/* Profile layout already owns its responsive outer spacing. */
+.profile-vip-content .ui-page-shell { max-width: none; padding: 0; }
