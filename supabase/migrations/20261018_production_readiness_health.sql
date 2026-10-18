@@ -114,6 +114,10 @@ begin
             select 1 from public.slaughterhouse_delivery_evidence e
             where e.delivery_id=d.id
           )
+          and not exists (
+            select 1 from public.slaughterhouse_purchase_requests r
+            where r.id=d.request_id and r.title like '[SQL TEST]%'
+          )
       $q$ into v_delivery_without_evidence;
     end if;
   end if;
