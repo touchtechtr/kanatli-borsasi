@@ -33,7 +33,7 @@ export default function BorsaPage() {
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <main className="marketplace-page min-h-screen"><div className="mx-auto max-w-7xl space-y-6 p-6">
       {/* Başlık ve Açıklama */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -105,6 +105,6 @@ export default function BorsaPage() {
           </table>
         </div>
       </div>
-    </div>
+    </div></main>
   );
 }
