@@ -112,8 +112,13 @@ export default function AdminThemeSettingsPage() {
     });
     if (saveError) setError(saveError.message);
     else {
-      if (publish) setPublished(settings);
-      setMessage(publish ? "Tema ayarları yayınlandı." : "Tema taslağı kaydedildi.");
+      if (publish) {
+        setPublished(settings);
+        window.dispatchEvent(new CustomEvent("platform-theme-published", {
+          detail: { scope },
+        }));
+      }
+      setMessage(publish ? "Tema ayarları yayınlandı ve görünüm güncellendi." : "Tema taslağı kaydedildi.");
     }
     setSaving(null);
   };
@@ -196,7 +201,14 @@ export default function AdminThemeSettingsPage() {
           </div>
         </SurfaceCard>
 
-        <div style={previewStyle} className={scope === "admin" ? "theme-admin" : "theme-marketplace"}>
+        <div
+          style={previewStyle}
+          className={scope === "admin" ? "theme-admin" : "theme-marketplace"}
+          data-card-style={settings.cardStyle}
+          data-density={settings.density}
+          data-heading-font={settings.headingFont}
+          data-motion={settings.motion}
+        >
           <SurfaceCard className="overflow-hidden">
             <SectionHeader title="Canlı önizleme" description="Başlık, kart, durum ve metrik örnekleri" actions={<StatusBadge tone="emerald"><Eye className="mr-1 h-3 w-3" />Önizleme</StatusBadge>} />
             <div className="rounded-2xl bg-[linear-gradient(135deg,rgba(var(--ui-primary),.12),rgba(255,255,255,.9))] p-5">
