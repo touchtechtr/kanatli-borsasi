@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, RefreshCw, ShieldAlert, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
+import { PageHeader } from "@/components/ui/PlatformUI";
 
 type PurchaseRequest = {
   id: string;
@@ -265,29 +266,16 @@ export default function AdminPurchases() {
   const disputed = deliveries.filter((x) => x.status === "uyusmazlik").length;
 
   return (
-    <main className="min-h-screen bg-slate-50 p-5 md:p-8">
+    <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-rose-600">
-              Alım ve teslimat denetimi
-            </p>
-            <h1 className="mt-2 text-3xl font-black text-slate-900">
-              Kesimhane Alımları
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Alım taleplerini yayınlanmadan önce inceleyin; teslimat, kanıt,
-              uyuşmazlık ve ödeme süreçlerini yönetin.
-            </p>
-          </div>
-          <button
-            onClick={() => void load()}
-            className="rounded-xl border bg-white px-4 py-2 text-sm font-bold"
-          >
-            <RefreshCw className="mr-2 inline h-4 w-4" />
-            Yenile
-          </button>
-        </header>
+        <PageHeader
+          eyebrow="Alım ve teslimat denetimi"
+          title="Kesimhane Alımları"
+          description="Alım taleplerini yayınlanmadan önce inceleyin; teslimat, kanıt, uyuşmazlık ve ödeme süreçlerini tek dosyada yönetin."
+          icon={ShieldAlert}
+          tone="red"
+          actions={<button onClick={() => void load()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4" />Yenile</button>}
+        />
         <section className="grid gap-4 sm:grid-cols-4">
           <Card
             label="Onay bekleyen talep"
