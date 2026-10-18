@@ -230,7 +230,7 @@ export default function MarketplaceListingDetailPage() {
     );
   if (!listing)
     return (
-      <main className="min-h-screen bg-slate-50 p-6">
+      <main className="min-h-screen bg-slate-50 p-6 marketplace-page">
         <div className="mx-auto max-w-xl rounded-2xl border border-red-200 bg-white p-8 text-center">
           <h1 className="text-xl font-extrabold">İlan görüntülenemiyor</h1>
           <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
