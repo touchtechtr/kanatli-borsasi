@@ -254,7 +254,7 @@ export default function ContractManagementPage() {
   if (!mounted) return null;
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-800 p-6 md:p-12">
+    <main className="min-h-screen bg-slate-50 text-slate-800 p-6 md:p-12 marketplace-page">
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Üst Kısım / Geri Dön */}
