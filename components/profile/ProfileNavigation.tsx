@@ -14,6 +14,7 @@ import {
   PackageSearch,
   ShieldCheck,
   Wallet,
+  Truck,
 } from "lucide-react";
 
 const ITEMS = [
@@ -26,6 +27,7 @@ const ITEMS = [
   },
   { href: "/profil/ilanlarim", label: "İlanlarım", icon: PackageSearch },
   { href: "/profil/teklifler", label: "Ticari Teklifler", icon: Handshake },
+  { href: "/profil/lojistik", label: "Nakliye ve Araçlar", icon: Truck },
   { href: "/kesimhane/alim-merkezi", label: "Kesimhane Alımları", icon: Factory },
   { href: "/profil/ilan-promosyonlari", label: "Öne Çıkarma", icon: Crown },
   { href: "/profil/islem-gecmisi", label: "İşlem Geçmişim", icon: History },
