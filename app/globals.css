@@ -438,3 +438,50 @@
 [data-motion="off"] *::after { animation: none !important; transition: none !important; }
 
 [data-motion="reduced"] .ui-surface-card--interactive:hover { transform: none; }
+
+
+/* Design-system form and action primitives */
+.ui-input {
+  width: 100%;
+  border: 1px solid rgba(var(--ui-border), .9);
+  border-radius: .9rem;
+  background: rgba(var(--ui-surface), .96);
+  padding: .72rem .85rem;
+  font-size: .875rem;
+  color: rgb(var(--ui-text));
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.ui-input:focus {
+  border-color: rgba(var(--ui-primary), .72);
+  box-shadow: 0 0 0 4px rgba(var(--ui-primary), .11);
+}
+.ui-button {
+  display: inline-flex;
+  min-height: 2.55rem;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  border-radius: .85rem;
+  padding: .65rem .95rem;
+  font-size: .78rem;
+  font-weight: 850;
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+.ui-button:not(:disabled):hover { transform: translateY(-1px); }
+.ui-button:disabled { cursor: not-allowed; opacity: .55; }
+.ui-button--primary {
+  color: white;
+  background: rgb(var(--ui-primary));
+  box-shadow: 0 12px 25px -15px rgba(var(--ui-primary), .85);
+}
+.ui-button--secondary {
+  color: rgb(var(--ui-text));
+  border: 1px solid rgba(var(--ui-border), .85);
+  background: rgba(var(--ui-surface), .9);
+}
+.ui-button--danger {
+  color: rgb(185 28 28);
+  border: 1px solid rgb(254 202 202);
+  background: rgb(254 242 242);
+}
