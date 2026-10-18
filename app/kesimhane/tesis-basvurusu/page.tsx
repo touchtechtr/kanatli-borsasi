@@ -93,7 +93,7 @@ export default function SlaughterhouseApplicationPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 md:p-10"><div className="mx-auto max-w-5xl space-y-6">
+    <main className="min-h-screen bg-slate-50 p-6 md:p-10 marketplace-page"><div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold text-violet-600">Entegre tesis</p><h1 className="mt-1 text-3xl font-bold text-slate-900">Kesimhane Tesis Başvurusu</h1><p className="mt-2 text-sm text-slate-500">Tesisinizi kaydedin ve yönetici onayına gönderin.</p></div><div className="flex gap-2"><Link href="/kesimhane" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">← Kesimhanelere dön</Link><button onClick={() => void loadData()} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Yenile</button></div></div>
       {errorMessage && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{errorMessage}</div>}{successMessage && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{successMessage}</div>}
 
