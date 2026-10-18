@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { dispatchNotificationEmails } from '@/lib/dispatch-notification-emails'
+import { PageHeader, PageShell } from '@/components/ui/PlatformUI'
 
 type CompanyRef = { name: string } | null
 type FinanceTab = 'trade' | 'slaughterhouse'
@@ -358,42 +359,23 @@ export default function AdminFinancePage() {
     tab === 'trade' ? tradeLabels : slaughterhouseLabels
 
   return (
-    <main className="min-h-screen bg-slate-50 p-5 md:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-bold text-emerald-600">
-              Finans yönetimi
-            </p>
-            <h1 className="mt-1 text-3xl font-extrabold text-slate-950">
-              Ödemeler ve Komisyonlar
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Ticari teklifleri ve kesimhane alımlarını tek finans merkezinden
-              izleyin.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={downloadCsv}
-              className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-bold"
-            >
-              <Download className="h-4 w-4" />
-              CSV indir
-            </button>
-            <button
-              onClick={() => void load()}
-              className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-bold"
-            >
-              <RefreshCw
-                className={
-                  'h-4 w-4 ' + (loading ? 'animate-spin' : '')
-                }
-              />
-              Yenile
-            </button>
-          </div>
-        </header>
+    <PageShell className="space-y-6">
+        <PageHeader
+          eyebrow="Finans yönetimi"
+          title="Ödemeler ve Komisyonlar"
+          description="Ticari teklifleri ve kesimhane alımlarını tek finans merkezinden izleyin."
+          icon={Wallet}
+          actions={
+            <>
+              <button onClick={downloadCsv} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold">
+                <Download className="h-4 w-4" />CSV indir
+              </button>
+              <button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white">
+                <RefreshCw className={'h-4 w-4 ' + (loading ? 'animate-spin' : '')} />Yenile
+              </button>
+            </>
+          }
+        />
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -401,7 +383,7 @@ export default function AdminFinancePage() {
           </div>
         )}
 
-        <section className="grid gap-3 rounded-2xl border bg-white p-2 sm:grid-cols-2">
+        <section className="ui-surface-card grid gap-3 p-2 sm:grid-cols-2">
           <button
             onClick={() => setTab('trade')}
             className={
@@ -640,9 +622,7 @@ export default function AdminFinancePage() {
             transferi, lisanslı ödeme kuruluşu entegrasyonu tamamlandığında
             bağlanacaktır.
           </p>
-        </div>
-      </div>
-    </main>
+        </div>    </PageShell>
   )
 }
 
@@ -686,7 +666,7 @@ function FinanceRow({
           : 'bg-red-100 text-red-700'
 
   return (
-    <article className="rounded-2xl border bg-white p-5 shadow-sm">
+    <article className="ui-surface-card p-5">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(130px,.5fr))_auto] lg:items-center">
         <div>
           <span
