@@ -308,7 +308,7 @@ export default function AdminFirmaOnayPage() {
 
   return (
     <main className="ui-page-shell">
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="space-y-6">
         <PageHeader
           eyebrow="Firma güven ve uygunluk"
           title="Firma Onay Paneli"
@@ -317,7 +317,7 @@ export default function AdminFirmaOnayPage() {
           tone="violet"
         />
 
-        <div className="flex gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+        <div className="ui-surface-card flex gap-2 overflow-x-auto p-2">
           {(
             ['beklemede', 'onaylandi', 'reddedildi', 'hepsi'] as FilterTab[]
           ).map((tab) => (
@@ -339,12 +339,12 @@ export default function AdminFirmaOnayPage() {
         </div>
 
         {actionError && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 text-sm text-red-700 rounded">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {actionError}
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
+        <div className="ui-surface-card divide-y divide-slate-100 overflow-hidden p-0">
           {loading ? (
             <div className="p-8 text-center text-sm text-slate-500">
               Yükleniyor...
