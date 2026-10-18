@@ -284,7 +284,7 @@ export default function NewLivestockPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 md:py-10">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 md:py-10 marketplace-page">
       <div className="mx-auto max-w-7xl space-y-6">
         <Link
           href="/livestock"
