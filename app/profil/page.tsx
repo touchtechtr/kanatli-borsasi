@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { BadgeCheck, Bell, Building2, FileText, Handshake, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeader } from '@/components/ui/PlatformUI'
 
 type Summary = {
   company: any
@@ -60,8 +61,8 @@ export default function ProfileOverviewPage() {
   const statusLabel = data.company?.status === 'onaylandi' ? 'Onaylı firma' : data.company?.status === 'reddedildi' ? 'Başvuru reddedildi' : 'Onay bekliyor'
 
   return (
-    <main className="space-y-5">
-      <header><p className="text-sm font-semibold text-emerald-600">Hesap merkezi</p><h1 className="mt-1 text-3xl font-bold text-slate-900">Profil Genel Bakış</h1><p className="mt-1 text-sm text-slate-500">Hesabınızı, şirketinizi ve ticari faaliyetlerinizi tek noktadan yönetin.</p></header>
+    <main className="ui-page-shell">
+      <PageHeader eyebrow="Şirket çalışma alanı" title="Profil Genel Bakış" description="Hesabınızı, şirketinizi ve ticari faaliyetlerinizi tek noktadan yönetin." icon={Building2} tone="emerald" />
       {error && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{error}</div>}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
