@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PlatformUI'
 
 type WalletTransaction = {
   id: string
-  type: 'sale_income' | 'purchase_expense' | 'platform_commission' | 'adjustment'
+  type: 'sale_income' | 'purchase_expense' | 'platform_commission' | 'transfer_fee' | 'adjustment'
   direction: 'credit' | 'debit'
   amount: number
   description: string
@@ -50,6 +50,7 @@ const transactionLabels: Record<WalletTransaction['type'], string> = {
   sale_income: 'Satış geliri',
   purchase_expense: 'Alım ödemesi',
   platform_commission: 'Platform komisyonu',
+  transfer_fee: 'Banka / aktarım masrafı',
   adjustment: 'Bakiye düzeltmesi',
 }
 
