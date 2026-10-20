@@ -35,6 +35,7 @@ type Order = {
   events: {
     id: string
     event_type: string
+    sequence_no: number
     old_status: string | null
     new_status: string
     provider_reference: string | null
@@ -78,7 +79,7 @@ export default function TransferCenterPage(){
     setLoading(true);setError(null)
     const [ordersResult,summaryResult]=await Promise.all([
       supabase.from('trade_transfer_orders').select(
-        'id,payment_id,trade_offer_id,attempt_no,priority,provider,currency,buyer_total,seller_gross_amount,platform_gross_commission,transfer_fee,fee_payer,seller_net_amount,platform_net_commission,status,provider_reference,failure_reason,requested_at,started_at,completed_at,payment:trade_payments!trade_transfer_orders_payment_id_fkey(product_title,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name)),events:trade_transfer_events(id,event_type,old_status,new_status,provider_reference,detail,created_at)'
+        'id,payment_id,trade_offer_id,attempt_no,priority,provider,currency,buyer_total,seller_gross_amount,platform_gross_commission,transfer_fee,fee_payer,seller_net_amount,platform_net_commission,status,provider_reference,failure_reason,requested_at,started_at,completed_at,payment:trade_payments!trade_transfer_orders_payment_id_fkey(product_title,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name)),events:trade_transfer_events(id,sequence_no,event_type,old_status,new_status,provider_reference,detail,created_at)'
       ).order('priority',{ascending:false}).order('requested_at',{ascending:true}),
       supabase.rpc('admin_trade_transfer_summary'),
     ])
@@ -120,7 +121,7 @@ export default function TransferCenterPage(){
 
       <section className="space-y-4">
         {filtered.map((row,index)=>{
-          const events=[...(row.events??[])].sort((a,b)=>a.created_at.localeCompare(b.created_at))
+          const events=[...(row.events??[])].sort((a,b)=>Number(a.sequence_no)-Number(b.sequence_no))
           return <article key={row.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(120px,.55fr))]">
               <div><div className="flex flex-wrap items-center gap-2"><Status value={row.status}/><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">Sıra {index+1}</span><span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700">Öncelik {row.priority}</span></div><h2 className="mt-3 font-black text-slate-900">{row.payment?.product_title??'Ticari ödeme'}</h2><p className="mt-1 text-xs text-slate-500">{row.payment?.buyer?.name??'—'} → {row.payment?.seller?.name??'—'}</p><p className="mt-2 text-xs font-semibold text-slate-600">{row.provider} · Deneme {row.attempt_no}{row.provider_reference?' · '+row.provider_reference:''}</p><Link href={'/admin/teklifler/'+row.trade_offer_id} className="mt-3 inline-flex text-xs font-bold text-emerald-700">Teklif dosyasını aç</Link></div>
