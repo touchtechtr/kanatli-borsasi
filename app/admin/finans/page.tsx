@@ -8,6 +8,7 @@ import {
   Factory,
   RefreshCw,
   Search,
+  Scale,
   ShieldCheck,
   Undo2,
   Wallet,
@@ -428,6 +429,9 @@ export default function AdminFinancePage() {
             <>
               <Link href="/admin/finans/aktarimlar" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800">
                 <Wallet className="h-4 w-4" />Aktarım Merkezi
+              </Link>
+              <Link href="/admin/finans/uyusmazliklar" className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-bold text-violet-800">
+                <Scale className="h-4 w-4" />Uyuşmazlık Merkezi
               </Link>
               <button onClick={downloadCsv} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold">
                 <Download className="h-4 w-4" />CSV indir
