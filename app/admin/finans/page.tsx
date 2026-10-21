@@ -47,7 +47,7 @@ type TradePayment = {
   dispute_decisions:
     | {
         id: string
-        decision_type: 'tam_iade' | 'tam_satici_odemesi' | 'kismi_paylasim'
+        decision_type: 'tam_iade' | 'tam_satici' | 'kismi_paylasim'
         status: string
         buyer_refund_amount: number
         seller_payout_amount: number
@@ -66,7 +66,7 @@ type TradePayment = {
       }
     | {
         id: string
-        decision_type: 'tam_iade' | 'tam_satici_odemesi' | 'kismi_paylasim'
+        decision_type: 'tam_iade' | 'tam_satici' | 'kismi_paylasim'
         status: string
         buyer_refund_amount: number
         seller_payout_amount: number
@@ -116,7 +116,7 @@ const tradeLabels: Record<string, string> = {
 
 const disputeDecisionLabels: Record<string, string> = {
   tam_iade: 'Tam iade',
-  tam_satici_odemesi: 'Satıcı lehine',
+  tam_satici: 'Satıcı lehine',
   kismi_paylasim: 'Kısmi paylaşım',
 }
 
