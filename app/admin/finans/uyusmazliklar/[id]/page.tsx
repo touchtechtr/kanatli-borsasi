@@ -277,7 +277,8 @@ export default function TradeDisputeDetailPage() {
                         <Amount title="Masraf" value={money(order.transfer_fee)} />
                         <Amount title="Net" value={money(order.net_amount)} />
                       </div>
-                      <p className="mt-3 text-[11px] text-slate-500">Masraf tarafı: {order.fee_payer === 'platform' ? 'Platform' : 'Alıcı / satıcı'}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2"><Status value={order.status} />{order.status === 'tamamlandi' ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black text-emerald-700">Masraf muhasebeleştirildi</span> : order.status === 'hata' ? <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-black text-slate-600">Masraf muhasebeleştirilmedi</span> : null}</div>
+                      <p className="mt-2 text-[11px] text-slate-500">Masraf tarafı: {order.fee_payer === 'platform' ? 'Platform' : 'Alıcı / satıcı'}</p>
                       {order.provider_reference && <p className="mt-1 text-[11px] font-bold text-blue-700">Referans: {order.provider_reference}</p>}
                       {order.failure_reason && <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs font-semibold text-red-700">{order.failure_reason}</p>}
                     </div>
