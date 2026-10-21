@@ -112,7 +112,7 @@ export default function TradeDisputesPage(){
             <div className="border-b bg-gradient-to-r from-slate-950 via-violet-950 to-slate-900 p-6 text-white">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div><Status value={dispute.status}/><h2 className="mt-3 text-xl font-black">{dispute.offer?.product_title??'Ticari uyuşmazlık'}</h2><p className="mt-1 text-sm text-slate-300">{dispute.offer?.buyer?.name??'—'} → {dispute.offer?.seller?.name??'—'}</p></div>
-                <div className="text-right text-xs text-slate-300"><p>Dosya: {dispute.id.slice(0,8)}</p><p className="mt-1">{new Date(dispute.created_at).toLocaleString('tr-TR')}</p></div>
+                <div className="text-right text-xs text-slate-300"><p>Dosya: {dispute.id.slice(0,8)}</p><p className="mt-1">{new Date(dispute.created_at).toLocaleString('tr-TR')}</p><Link href={'/admin/finans/uyusmazliklar/'+dispute.id} className="mt-3 inline-flex rounded-xl bg-white/10 px-3 py-2 font-bold text-white ring-1 ring-white/15 transition hover:bg-white/20">Denetim dosyasını aç</Link></div>
               </div>
             </div>
 
