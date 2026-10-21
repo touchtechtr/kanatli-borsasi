@@ -49,9 +49,21 @@ export default function TradeDisputesPage(){
 
   useEffect(()=>{void load()},[load])
 
-  const visible=disputes.filter(d=>filter==='tumu'||(filter==='acik'?d.status==='acik':filter==='suruyor'?['karar_verildi'].includes(d.status):d.status==='kapatildi'))
+  const visible=disputes.filter(dispute=>{
+    if(filter==='tumu')return true
+    if(filter==='acik')return dispute.status==='acik'
+    if(filter==='tamamlandi')return dispute.status==='kapatildi'
+    const decision=decisions.find(item=>item.dispute_id===dispute.id)
+    if(filter==='bekleyen')return decision?.status==='aktarim_bekliyor'
+    if(filter==='suruyor')return decision?.status==='aktarim_suruyor'
+    if(filter==='hata'){
+      const decisionOrders=orders.filter(item=>item.decision_id===decision?.id)
+      return decisionOrders.some(item=>item.status==='hata'&&!decisionOrders.some(completed=>completed.settlement_kind===item.settlement_kind&&completed.status==='tamamlandi'))
+    }
+    return true
+  })
   const openCount=disputes.filter(d=>d.status==='acik').length
-  const runningCount=disputes.filter(d=>d.status==='karar_verildi').length
+  const runningCount=decisions.filter(d=>['aktarim_bekliyor','aktarim_suruyor'].includes(d.status)).length
   const closedCount=disputes.filter(d=>d.status==='kapatildi').length
 
   const resolve=async(dispute:Dispute,refund:number,seller:number,commission:number,reason:string)=>{
@@ -100,7 +112,7 @@ export default function TradeDisputesPage(){
       </section>
 
       <section className="flex flex-wrap gap-2 rounded-2xl border bg-white p-3">
-        {[['tumu','Tüm dosyalar'],['acik','Karar bekleyen'],['suruyor','Aktarımı süren'],['kapatildi','Kapanan']].map(([value,label])=><button key={value} onClick={()=>setFilter(value)} className={'rounded-xl px-4 py-2 text-xs font-bold '+(filter===value?'bg-slate-950 text-white':'bg-slate-100 text-slate-600')}>{label}</button>)}
+        {[['tumu','Tüm dosyalar'],['acik','Karar bekleyen'],['bekleyen','Aktarım bekleyen'],['suruyor','Aktarımı süren'],['hata','Aktarım hatası'],['tamamlandi','Tamamlanan']].map(([value,label])=><button key={value} onClick={()=>setFilter(value)} className={'rounded-xl px-4 py-2 text-xs font-bold '+(filter===value?'bg-slate-950 text-white':'bg-slate-100 text-slate-600')}>{label}</button>)}
       </section>
 
       <section className="space-y-5">
