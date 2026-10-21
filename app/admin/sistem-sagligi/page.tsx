@@ -31,6 +31,16 @@ type ReadinessHealth={
   operations:{stale_deliveries:number;completed_delivery_without_evidence:number;accepted_offer_without_delivery:number;stale_transport_requests:number;matched_transport_without_offer:number};
   identity:{profiles_without_auth_user:number;duplicate_company_tax_numbers:number};
 };
+type DisputeHealth={
+  checked_at:string;
+  open_disputes:number;
+  allocation_mismatches:number;
+  closed_with_incomplete_settlement:number;
+  duplicate_completed_legs:number;
+  settlement_fee_ledger_mismatches:number;
+  completed_state_mismatches:number;
+  active_failed_settlements:number;
+};
 type CheckRow={label:string;value:number;description:string;href:string};
 
 export default function AdminSystemHealthPage(){
@@ -38,23 +48,26 @@ export default function AdminSystemHealthPage(){
   const[data,setData]=useState<HealthData|null>(null);
   const[lifecycle,setLifecycle]=useState<LifecycleHealth|null>(null);
   const[readiness,setReadiness]=useState<ReadinessHealth|null>(null);
+  const[disputes,setDisputes]=useState<DisputeHealth|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<string|null>(null);
 
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
-    const[coreResult,lifecycleResult,readinessResult]=await Promise.all([
+    const[coreResult,lifecycleResult,readinessResult,disputeResult]=await Promise.all([
       supabase.rpc("admin_system_integrity_health"),
       supabase.rpc("admin_listing_lifecycle_health"),
-      supabase.rpc("admin_production_readiness_health")
+      supabase.rpc("admin_production_readiness_health"),
+      supabase.rpc("admin_trade_dispute_health")
     ]);
-    const loadError=coreResult.error||lifecycleResult.error||readinessResult.error;
+    const loadError=coreResult.error||lifecycleResult.error||readinessResult.error||disputeResult.error;
     if(loadError){
-      setError(loadError.message);setData(null);setLifecycle(null);setReadiness(null);
+      setError(loadError.message);setData(null);setLifecycle(null);setReadiness(null);setDisputes(null);
     }else{
       setData(coreResult.data as HealthData);
       setLifecycle(lifecycleResult.data as LifecycleHealth);
       setReadiness(readinessResult.data as ReadinessHealth);
+      setDisputes(disputeResult.data as DisputeHealth);
     }
     setLoading(false);
   },[supabase]);
@@ -80,6 +93,15 @@ export default function AdminSystemHealthPage(){
       {label:"Kalan miktarlı tamamlanmış ilan",value:lifecycle.completed_with_remaining_quantity,description:"Tamamlandığı halde satılabilir miktarı bulunan ilanlar.",href:"/admin/ilanlar"},
       {label:"Geçersiz miktar dengesi",value:lifecycle.invalid_quantity_balance,description:"İlk, kalan, rezerve ve satılan miktarları uyuşmayan ilanlar.",href:"/admin/ilanlar"},
       {label:"Birden fazla kabul edilmiş teklif",value:lifecycle.multiple_accepted_offers,description:"Aynı ilan için eş zamanlı kabul edilmiş birden fazla teklif.",href:"/admin/teklifler"}
+    ]:[]),
+    ...(disputes?[
+      {label:"Açık ticari uyuşmazlık",value:disputes.open_disputes,description:"Yönetici kararı bekleyen açık ticari uyuşmazlık dosyaları.",href:"/admin/finans/uyusmazliklar"},
+      {label:"Uyuşmazlık dağılım farkı",value:disputes.allocation_mismatches,description:"Alıcı iadesi, satıcı ödemesi ve komisyon toplamı havuz tutarıyla eşleşmeyen kararlar.",href:"/admin/finans/uyusmazliklar"},
+      {label:"Eksik aktarımla kapatılmış dosya",value:disputes.closed_with_incomplete_settlement,description:"Kapatıldığı halde gerekli ödeme ayakları tamamlanmamış uyuşmazlıklar.",href:"/admin/finans/uyusmazliklar"},
+      {label:"Mükerrer başarılı uyuşmazlık aktarımı",value:disputes.duplicate_completed_legs,description:"Aynı karar ve ödeme ayağı için birden fazla başarılı aktarım.",href:"/admin/finans/uyusmazliklar"},
+      {label:"Uyuşmazlık masraf muhasebesi farkı",value:disputes.settlement_fee_ledger_mismatches,description:"Yalnız tamamlanan aktarım masraflarıyla cüzdan muhasebesi eşleşmeyen kararlar.",href:"/admin/finans/uyusmazliklar"},
+      {label:"Karar–ödeme durum uyuşmazlığı",value:disputes.completed_state_mismatches,description:"Tamamlanan karar ile uyuşmazlık, teklif veya ödeme durumu birbirini doğrulamıyor.",href:"/admin/finans/uyusmazliklar"},
+      {label:"Çözümlenmemiş aktarım hatası",value:disputes.active_failed_settlements,description:"Hatalı aktarımından sonra başarılı yedek aktarımı bulunmayan uyuşmazlık dosyaları.",href:"/admin/finans/uyusmazliklar"}
     ]:[]),
     ...(readiness?[
       {label:"RLS kapalı tablo",value:readiness.security.rls_disabled_tables,description:"Public şemada satır güvenliği etkin olmayan tablolar.",href:"/admin/sistem-sagligi"},
