@@ -694,7 +694,7 @@ export default function AdminFinancePage() {
                           <span>Platform komisyonu: <strong>{money(decision.platform_commission_amount)}</strong></span>
                           <span>Muhasebeleşen aktarım masrafı: <strong>{money(completedFee)}</strong></span>
                         </div>
-                        <Link href="/admin/finans/uyusmazliklar" className="mt-2 inline-block font-bold text-violet-700">
+                        <Link href={'/admin/finans/uyusmazliklar/' + decision.id} className="mt-2 inline-block font-bold text-violet-700">
                           Uyuşmazlık dosyasını aç
                         </Link>
                       </div>
