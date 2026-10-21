@@ -44,19 +44,46 @@ type TradePayment = {
     delivery_confirmations: { party: 'seller' | 'buyer' }[]
     delivery_disputes: { status: string }[]
   } | null
-  dispute_decisions: {
-    id: string
-    decision_type: 'tam_iade' | 'tam_satici_odemesi' | 'kismi_paylasim'
-    status: string
-    buyer_refund_amount: number
-    seller_payout_amount: number
-    platform_commission_amount: number
-    completed_at: string | null
-    settlement_orders: {
-      status: string
-      transfer_fee: number
-    }[]
-  }[]
+  dispute_decisions:
+    | {
+        id: string
+        decision_type: 'tam_iade' | 'tam_satici_odemesi' | 'kismi_paylasim'
+        status: string
+        buyer_refund_amount: number
+        seller_payout_amount: number
+        platform_commission_amount: number
+        completed_at: string | null
+        settlement_orders:
+          | {
+              status: string
+              transfer_fee: number
+            }[]
+          | {
+              status: string
+              transfer_fee: number
+            }
+          | null
+      }
+    | {
+        id: string
+        decision_type: 'tam_iade' | 'tam_satici_odemesi' | 'kismi_paylasim'
+        status: string
+        buyer_refund_amount: number
+        seller_payout_amount: number
+        platform_commission_amount: number
+        completed_at: string | null
+        settlement_orders:
+          | {
+              status: string
+              transfer_fee: number
+            }[]
+          | {
+              status: string
+              transfer_fee: number
+            }
+          | null
+      }[]
+    | null
 }
 
 type SlaughterhousePayment = {
@@ -93,8 +120,20 @@ const disputeDecisionLabels: Record<string, string> = {
   kismi_paylasim: 'Kısmi paylaşım',
 }
 
-const completedDecision = (row: TradePayment) =>
-  row.dispute_decisions?.find((decision) => decision.status === 'tamamlandi') ?? null
+const completedDecision = (row: TradePayment) => {
+  const decisions = row.dispute_decisions
+  if (!decisions) return null
+  if (Array.isArray(decisions)) {
+    return decisions.find((decision) => decision.status === 'tamamlandi') ?? null
+  }
+  return decisions.status === 'tamamlandi' ? decisions : null
+}
+
+const completedSettlementOrders = (row: TradePayment) => {
+  const orders = completedDecision(row)?.settlement_orders
+  if (!orders) return []
+  return Array.isArray(orders) ? orders : [orders]
+}
 
 const tradeStatusLabel = (row: TradePayment) => {
   const decision = completedDecision(row)
@@ -643,7 +682,7 @@ export default function AdminFinancePage() {
                   resolution={(() => {
                     const decision = completedDecision(row)
                     if (!decision) return null
-                    const completedFee = (decision.settlement_orders ?? [])
+                    const completedFee = completedSettlementOrders(row)
                       .filter((order) => order.status === 'tamamlandi')
                       .reduce((sum, order) => sum + Number(order.transfer_fee || 0), 0)
                     return (
