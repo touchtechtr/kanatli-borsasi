@@ -44,6 +44,19 @@ type TradePayment = {
     delivery_confirmations: { party: 'seller' | 'buyer' }[]
     delivery_disputes: { status: string }[]
   } | null
+  dispute_decisions: {
+    id: string
+    decision_type: 'tam_iade' | 'tam_satici_odemesi' | 'kismi_paylasim'
+    status: string
+    buyer_refund_amount: number
+    seller_payout_amount: number
+    platform_commission_amount: number
+    completed_at: string | null
+    settlement_orders: {
+      status: string
+      transfer_fee: number
+    }[]
+  }[]
 }
 
 type SlaughterhousePayment = {
@@ -72,6 +85,24 @@ const tradeLabels: Record<string, string> = {
   saticiya_aktarildi: 'Satıcıya aktarıldı',
   iade_edildi: 'İade edildi',
   iptal: 'İptal',
+}
+
+const disputeDecisionLabels: Record<string, string> = {
+  tam_iade: 'Tam iade',
+  tam_satici_odemesi: 'Satıcı lehine',
+  kismi_paylasim: 'Kısmi paylaşım',
+}
+
+const completedDecision = (row: TradePayment) =>
+  row.dispute_decisions?.find((decision) => decision.status === 'tamamlandi') ?? null
+
+const tradeStatusLabel = (row: TradePayment) => {
+  const decision = completedDecision(row)
+  if (decision) {
+    return 'Uyuşmazlıkla sonuçlandı · ' +
+      (disputeDecisionLabels[decision.decision_type] ?? decision.decision_type)
+  }
+  return tradeLabels[row.status] ?? row.status
 }
 
 const slaughterhouseLabels: Record<string, string> = {
@@ -120,7 +151,7 @@ export default function AdminFinancePage() {
       supabase
         .from('trade_payments')
         .select(
-          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,transfer_status,transfer_reference,transfer_error,transfer_requested_at,transfer_started_at,transfer_completed_at,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name),offer:trade_offers!trade_payments_trade_offer_id_fkey(id,delivery_confirmations:trade_delivery_confirmations(party),delivery_disputes:trade_delivery_disputes(status))',
+          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,transfer_status,transfer_reference,transfer_error,transfer_requested_at,transfer_started_at,transfer_completed_at,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name),offer:trade_offers!trade_payments_trade_offer_id_fkey(id,delivery_confirmations:trade_delivery_confirmations(party),delivery_disputes:trade_delivery_disputes(status)),dispute_decisions:trade_dispute_decisions(id,decision_type,status,buyer_refund_amount,seller_payout_amount,platform_commission_amount,completed_at,settlement_orders:trade_dispute_settlement_orders(status,transfer_fee))',
         )
         .order('created_at', { ascending: false }),
       supabase
@@ -378,7 +409,7 @@ export default function AdminFinancePage() {
             row.product_title,
             row.buyer?.name ?? '',
             row.seller?.name ?? '',
-            tradeLabels[row.status] ?? row.status,
+            tradeStatusLabel(row),
             row.buyer_total,
             row.seller_amount,
             row.commission_amount,
@@ -591,11 +622,32 @@ export default function AdminFinancePage() {
                   buyer={row.buyer?.name}
                   seller={row.seller?.name}
                   status={row.status}
-                  statusLabel={tradeLabels[row.status] ?? row.status}
+                  statusLabel={tradeStatusLabel(row)}
                   createdAt={row.created_at}
                   buyerTotal={row.buyer_total}
-                  sellerAmount={row.seller_amount}
-                  commissionAmount={row.commission_amount}
+                  sellerAmount={completedDecision(row)?.seller_payout_amount ?? row.seller_amount}
+                  commissionAmount={completedDecision(row)?.platform_commission_amount ?? row.commission_amount}
+                  resolution={(() => {
+                    const decision = completedDecision(row)
+                    if (!decision) return null
+                    const completedFee = (decision.settlement_orders ?? [])
+                      .filter((order) => order.status === 'tamamlandi')
+                      .reduce((sum, order) => sum + Number(order.transfer_fee || 0), 0)
+                    return (
+                      <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs text-violet-950">
+                        <p className="font-extrabold">Uyuşmazlık dağılımı</p>
+                        <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                          <span>Alıcı iadesi: <strong>{money(decision.buyer_refund_amount)}</strong></span>
+                          <span>Satıcı ödemesi: <strong>{money(decision.seller_payout_amount)}</strong></span>
+                          <span>Platform komisyonu: <strong>{money(decision.platform_commission_amount)}</strong></span>
+                          <span>Muhasebeleşen aktarım masrafı: <strong>{money(completedFee)}</strong></span>
+                        </div>
+                        <Link href="/admin/finans/uyusmazliklar" className="mt-2 inline-block font-bold text-violet-700">
+                          Uyuşmazlık dosyasını aç
+                        </Link>
+                      </div>
+                    )
+                  })()}
                   href={'/admin/teklifler/' + row.trade_offer_id}
                   hrefLabel="Teklifi görüntüle"
                   actions={
@@ -742,6 +794,7 @@ function FinanceRow({
   href,
   hrefLabel,
   detail,
+  resolution,
   actions,
 }: {
   title: string
@@ -756,6 +809,7 @@ function FinanceRow({
   href: string
   hrefLabel: string
   detail?: string
+  resolution?: React.ReactNode
   actions: React.ReactNode
 }) {
   const tone =
@@ -789,6 +843,7 @@ function FinanceRow({
               Hesaplama: {detail}
             </p>
           )}
+          {resolution}
           <Link
             href={href}
             className="mt-2 inline-block text-xs font-bold text-emerald-700"
