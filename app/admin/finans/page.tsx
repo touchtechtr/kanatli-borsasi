@@ -105,6 +105,18 @@ const tradeStatusLabel = (row: TradePayment) => {
   return tradeLabels[row.status] ?? row.status
 }
 
+const settledSellerAmount = (row: TradePayment) =>
+  Number(completedDecision(row)?.seller_payout_amount ?? row.seller_amount)
+
+const settledCommissionAmount = (row: TradePayment) =>
+  Number(completedDecision(row)?.platform_commission_amount ?? row.commission_amount)
+
+const settledRefundAmount = (row: TradePayment) => {
+  const decision = completedDecision(row)
+  if (decision) return Number(decision.buyer_refund_amount || 0)
+  return row.status === 'iade_edildi' ? Number(row.buyer_total) : 0
+}
+
 const slaughterhouseLabels: Record<string, string> = {
   serbest_birakilmaya_hazir: 'Serbest bırakılmaya hazır',
   serbest_birakildi: 'Satıcıya aktarıldı',
@@ -260,13 +272,14 @@ export default function AdminFinancePage() {
           .reduce((sum, row) => sum + Number(row.buyer_total), 0),
         released: tradeRows
           .filter((row) => row.status === 'saticiya_aktarildi')
-          .reduce((sum, row) => sum + Number(row.seller_amount), 0),
+          .reduce((sum, row) => sum + settledSellerAmount(row), 0),
         commission: tradeRows
           .filter((row) => row.status === 'saticiya_aktarildi')
-          .reduce((sum, row) => sum + Number(row.commission_amount), 0),
-        refunded: tradeRows
-          .filter((row) => row.status === 'iade_edildi')
-          .reduce((sum, row) => sum + Number(row.buyer_total), 0),
+          .reduce((sum, row) => sum + settledCommissionAmount(row), 0),
+        refunded: tradeRows.reduce(
+          (sum, row) => sum + settledRefundAmount(row),
+          0,
+        ),
         waitingCount: tradeRows.filter(
           (row) => row.status === 'odeme_bekliyor',
         ).length,
@@ -411,8 +424,8 @@ export default function AdminFinancePage() {
             row.seller?.name ?? '',
             tradeStatusLabel(row),
             row.buyer_total,
-            row.seller_amount,
-            row.commission_amount,
+            settledSellerAmount(row),
+            settledCommissionAmount(row),
             row.created_at,
           ])
         : filteredSlaughterhouse.map((row) => [
