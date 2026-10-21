@@ -47,6 +47,7 @@ type TradePayment = {
   dispute_decisions:
     | {
         id: string
+        dispute_id: string
         decision_type: 'tam_iade' | 'tam_satici' | 'kismi_paylasim'
         status: string
         buyer_refund_amount: number
@@ -66,6 +67,7 @@ type TradePayment = {
       }
     | {
         id: string
+        dispute_id: string
         decision_type: 'tam_iade' | 'tam_satici' | 'kismi_paylasim'
         status: string
         buyer_refund_amount: number
@@ -202,7 +204,7 @@ export default function AdminFinancePage() {
       supabase
         .from('trade_payments')
         .select(
-          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,transfer_status,transfer_reference,transfer_error,transfer_requested_at,transfer_started_at,transfer_completed_at,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name),offer:trade_offers!trade_payments_trade_offer_id_fkey(id,delivery_confirmations:trade_delivery_confirmations(party),delivery_disputes:trade_delivery_disputes(status)),dispute_decisions:trade_dispute_decisions(id,decision_type,status,buyer_refund_amount,seller_payout_amount,platform_commission_amount,completed_at,settlement_orders:trade_dispute_settlement_orders(status,transfer_fee))',
+          'id,trade_offer_id,product_title,seller_amount,commission_amount,buyer_total,status,payment_reference,admin_note,transfer_status,transfer_reference,transfer_error,transfer_requested_at,transfer_started_at,transfer_completed_at,created_at,buyer:companies!trade_payments_buyer_company_id_fkey(name),seller:companies!trade_payments_seller_company_id_fkey(name),offer:trade_offers!trade_payments_trade_offer_id_fkey(id,delivery_confirmations:trade_delivery_confirmations(party),delivery_disputes:trade_delivery_disputes(status)),dispute_decisions:trade_dispute_decisions(id,dispute_id,decision_type,status,buyer_refund_amount,seller_payout_amount,platform_commission_amount,completed_at,settlement_orders:trade_dispute_settlement_orders(status,transfer_fee))',
         )
         .order('created_at', { ascending: false }),
       supabase
@@ -694,7 +696,7 @@ export default function AdminFinancePage() {
                           <span>Platform komisyonu: <strong>{money(decision.platform_commission_amount)}</strong></span>
                           <span>Muhasebeleşen aktarım masrafı: <strong>{money(completedFee)}</strong></span>
                         </div>
-                        <Link href={'/admin/finans/uyusmazliklar/' + decision.id} className="mt-2 inline-block font-bold text-violet-700">
+                        <Link href={'/admin/finans/uyusmazliklar/' + decision.dispute_id} className="mt-2 inline-block font-bold text-violet-700">
                           Uyuşmazlık dosyasını aç
                         </Link>
                       </div>
