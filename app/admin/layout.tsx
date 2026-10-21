@@ -23,6 +23,7 @@ import {
   Microscope,
   Palette,
   ScrollText,
+  Scale,
   Settings2,
   ShieldCheck,
   Tags,
@@ -91,6 +92,7 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[] }> = [
     title: "Finans ve sistem",
     items: [
       { label: "Finans ve Ödemeler", href: "/admin/finans", icon: CircleDollarSign },
+      { label: "Uyuşmazlıklar", href: "/admin/finans/uyusmazliklar", icon: Scale },
       { label: "Kullanıcılar", href: "/admin/kullanicilar", icon: Users },
       { label: "Yönetim Personeli", href: "/admin/personel", icon: UserCog },
       { label: "Bildirimler", href: "/admin/bildirimler", icon: Bell },
@@ -110,6 +112,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [access, setAccess] = useState<PlatformAccess | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [openDisputeCount, setOpenDisputeCount] = useState(0);
   const emailDispatchStarted = useRef(false);
 
   const canOpenPath = (href: string) => {
@@ -148,6 +151,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       setIsAdmin(true);
       setAccess({ ...result, email: result.email ?? user.email ?? null, full_name: result.full_name ?? user.user_metadata?.full_name ?? null });
+      const { count: disputeCount } = await supabase
+        .from("trade_delivery_disputes")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "acik");
+      if (mounted) setOpenDisputeCount(disputeCount ?? 0);
       setChecking(false);
       if (!emailDispatchStarted.current) {
         emailDispatchStarted.current = true;
@@ -181,7 +189,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           return <div key={group.title}><p className="px-3 pb-2 text-[10px] font-black uppercase tracking-[.18em] text-slate-500">{group.title}</p><div className="space-y-1">{items.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
-            return <Link key={item.href} href={item.href} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active ? "bg-white/12 text-white ring-1 ring-white/10" : "text-slate-400 hover:bg-white/8 hover:text-white"}`}><Icon className={`h-[18px] w-[18px] ${active ? "text-violet-300" : "text-slate-500 group-hover:text-violet-300"}`} /><span className="flex-1 truncate">{item.label}</span>{active && <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />}</Link>;
+            return <Link key={item.href} href={item.href} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active ? "bg-white/12 text-white ring-1 ring-white/10" : "text-slate-400 hover:bg-white/8 hover:text-white"}`}><Icon className={`h-[18px] w-[18px] ${active ? "text-violet-300" : "text-slate-500 group-hover:text-violet-300"}`} /><span className="flex-1 truncate">{item.label}</span>{item.href === "/admin/finans/uyusmazliklar" && openDisputeCount > 0 && <span className="min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-black text-white">{openDisputeCount}</span>}{active && <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />}</Link>;
           })}</div></div>;
         })}
       </nav>
