@@ -258,7 +258,7 @@ export default function CompanyOffersPage() {
   const outgoing = offers.filter(
     (offer) => offer.buyer_company_id === company?.id,
   );
-  const waitingIncoming = incoming.filter(
+  const waitingResponse = offers.filter(
     (offer) =>
       offer.admin_status === "onaylandi" && offer.status === "beklemede",
   ).length;
@@ -347,7 +347,7 @@ export default function CompanyOffersPage() {
           />
           <Stat
             label="Yanıt bekleyen"
-            value={waitingIncoming}
+            value={waitingResponse}
             icon={Clock3}
             tone="amber"
           />
