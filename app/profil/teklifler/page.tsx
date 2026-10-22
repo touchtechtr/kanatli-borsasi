@@ -24,6 +24,7 @@ type DisputeOrder = {
   provider: string;
   gross_amount: number;
   transfer_fee: number;
+  fee_payer: "platform" | "recipient";
   net_amount: number;
   status: string;
   provider_reference: string | null;
@@ -174,7 +175,7 @@ export default function CompanyOffersPage() {
     const { data: orderRows, error: orderError } = decisionIds.length
       ? await supabase
           .from("trade_dispute_settlement_orders")
-          .select("decision_id,settlement_kind,attempt_no,provider,gross_amount,transfer_fee,net_amount,status,provider_reference")
+          .select("decision_id,settlement_kind,attempt_no,provider,gross_amount,transfer_fee,fee_payer,net_amount,status,provider_reference")
           .in("decision_id", decisionIds)
           .order("attempt_no", { ascending: true })
       : { data: [], error: null };
@@ -657,6 +658,15 @@ function DisputeSummary({ dispute }: { dispute: DeliveryDispute }) {
                   }
                 >
                   {order.settlement_kind === "buyer_refund" ? "Alıcı iadesi" : "Satıcı ödemesi"} · Deneme {order.attempt_no} · {order.status === "tamamlandi" ? "Tamamlandı" : order.status === "hata" ? "Başarısız" : "İşleniyor"}
+                  {order.transfer_fee > 0 && (
+                    <> · {order.status === "hata"
+                      ? "Masraf uygulanmadı"
+                      : order.fee_payer === "platform"
+                        ? "Masrafı platform ödedi"
+                        : order.settlement_kind === "buyer_refund"
+                          ? "Masraf iade tutarından kesildi"
+                          : "Masraf satıcı ödemesinden kesildi"}</>
+                  )}
                 </span>
               ))}
             </div>
