@@ -84,7 +84,7 @@ export default function TradeDisputesPage(){
     const note=prompt('Yönetim notu (isteğe bağlı):','')??''
     setBusy(decision.id+kind);setError(null)
     const{error:e}=await supabase.rpc('admin_create_dispute_settlement_order',{p_decision_id:decision.id,p_kind:kind,p_provider:provider,p_transfer_fee:fee,p_fee_payer:feePayer,p_priority:priority,p_note:note||null})
-    if(e)setError(e.message);else await load()
+    if(e)setError(e.message);else{await dispatchNotificationEmails(supabase);await load()}
     setBusy(null)
   }
 
