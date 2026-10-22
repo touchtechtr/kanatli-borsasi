@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/ui/PlatformUI";
 type OfferStatus =
   "beklemede" | "kabul_edildi" | "reddedildi" | "iptal_edildi" | "tamamlandi";
 type DisputeOrder = {
+  decision_id: string;
   settlement_kind: "buyer_refund" | "seller_payout";
   attempt_no: number;
   provider: string;
@@ -29,6 +30,8 @@ type DisputeOrder = {
 };
 
 type DisputeDecision = {
+  id: string;
+  dispute_id: string;
   decision_type: "tam_iade" | "tam_satici" | "kismi_paylasim";
   status: string;
   buyer_total: number;
@@ -43,6 +46,7 @@ type DisputeDecision = {
 
 type DeliveryDispute = {
   id: string;
+  trade_offer_id: string;
   status: string;
   reason: string;
   admin_note: string | null;
@@ -130,7 +134,7 @@ export default function CompanyOffersPage() {
     const { data, error } = await supabase
       .from("trade_offers")
       .select(
-        "id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, seller_unit_price, buyer_unit_price, subtotal_amount, commission_amount, total_amount, message, status, admin_status, created_at, delivery_confirmations:trade_delivery_confirmations(party,confirmed_at), delivery_disputes:trade_delivery_disputes(id,status,reason,admin_note,created_at,resolved_at,decision:trade_dispute_decisions(decision_type,status,buyer_total,buyer_refund_amount,seller_payout_amount,platform_commission_amount,reason,decided_at,completed_at,settlement_orders:trade_dispute_settlement_orders(settlement_kind,attempt_no,provider,gross_amount,transfer_fee,net_amount,status,provider_reference)))",
+        "id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, seller_unit_price, buyer_unit_price, subtotal_amount, commission_amount, total_amount, message, status, admin_status, created_at, delivery_confirmations:trade_delivery_confirmations(party,confirmed_at), delivery_disputes:trade_delivery_disputes(id,status,reason,created_at)",
       )
       .or(
         `buyer_company_id.eq.${companyData.id},seller_company_id.eq.${companyData.id}`,
@@ -144,6 +148,55 @@ export default function CompanyOffersPage() {
     }
 
     const rows = data ?? [];
+    const offerIds = rows.map((offer) => offer.id);
+    const { data: disputeRows, error: disputeError } = offerIds.length
+      ? await supabase
+          .from("trade_delivery_disputes")
+          .select("id,trade_offer_id,status,reason,admin_note,created_at,resolved_at")
+          .in("trade_offer_id", offerIds)
+      : { data: [], error: null };
+    if (disputeError) {
+      setErrorMessage("Uyuşmazlık kayıtları yüklenemedi: " + disputeError.message);
+    }
+
+    const disputeIds = (disputeRows ?? []).map((item) => item.id);
+    const { data: decisionRows, error: decisionError } = disputeIds.length
+      ? await supabase
+          .from("trade_dispute_decisions")
+          .select("id,dispute_id,decision_type,status,buyer_total,buyer_refund_amount,seller_payout_amount,platform_commission_amount,reason,decided_at,completed_at")
+          .in("dispute_id", disputeIds)
+      : { data: [], error: null };
+    if (decisionError) {
+      setErrorMessage("Uyuşmazlık kararları yüklenemedi: " + decisionError.message);
+    }
+
+    const decisionIds = (decisionRows ?? []).map((item) => item.id);
+    const { data: orderRows, error: orderError } = decisionIds.length
+      ? await supabase
+          .from("trade_dispute_settlement_orders")
+          .select("decision_id,settlement_kind,attempt_no,provider,gross_amount,transfer_fee,net_amount,status,provider_reference")
+          .in("decision_id", decisionIds)
+          .order("attempt_no", { ascending: true })
+      : { data: [], error: null };
+    if (orderError) {
+      setErrorMessage("Uyuşmazlık aktarımları yüklenemedi: " + orderError.message);
+    }
+
+    const enrichedDisputes = (disputeRows ?? []).map((dispute) => {
+      const decision = (decisionRows ?? []).find((item) => item.dispute_id === dispute.id);
+      return {
+        ...dispute,
+        decision: decision
+          ? {
+              ...decision,
+              settlement_orders: (orderRows ?? []).filter(
+                (order) => order.decision_id === decision.id,
+              ),
+            }
+          : null,
+      };
+    });
+
     const companyIds = [
       ...new Set(
         rows.flatMap((offer) => [
@@ -164,6 +217,9 @@ export default function CompanyOffersPage() {
     setOffers(
       rows.map((offer) => ({
         ...offer,
+        delivery_disputes: enrichedDisputes.filter(
+          (dispute) => dispute.trade_offer_id === offer.id,
+        ),
         buyerName: nameMap.get(offer.buyer_company_id) || "Alıcı firma",
         sellerName: nameMap.get(offer.seller_company_id) || "Satıcı firma",
       })) as Offer[],
