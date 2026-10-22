@@ -16,12 +16,15 @@ declare
   message_value text;
   kind_label text;
   event_link text := '/profil/teklifler';
+  case_code text;
 begin
   select * into dispute_row
   from public.trade_delivery_disputes
   where id=new.dispute_id;
 
   if not found then return new; end if;
+
+  case_code:=upper(left(new.dispute_id::text,8));
 
   select * into offer_row
   from public.trade_offers
@@ -38,7 +41,7 @@ begin
     else 'para aktarımı'
   end;
 
-  title_value:=case new.event_type
+  title_value:=(case new.event_type
     when 'uyusmazlik_acildi' then 'Ticari uyuşmazlık açıldı'
     when 'karar_verildi' then 'Uyuşmazlık kararı verildi'
     when 'emir_verildi' then 'Uyuşmazlık aktarım emri oluşturuldu'
@@ -47,9 +50,9 @@ begin
     when 'tamamlandi' then 'Uyuşmazlık aktarımı tamamlandı'
     when 'dosya_kapatildi' then 'Uyuşmazlık dosyası kapatıldı'
     else 'Uyuşmazlık dosyası güncellendi'
-  end;
+  end)||' · Dosya #'||case_code;
 
-  message_value:=case new.event_type
+  message_value:='Dosya #'||case_code||' · '||(case new.event_type
     when 'uyusmazlik_acildi' then
       '“'||offer_row.product_title||'” işlemi için uyuşmazlık dosyası açıldı. Para güvenli havuzda korunuyor. Gerekçe: '||dispute_row.reason
     when 'karar_verildi' then
@@ -66,7 +69,7 @@ begin
       '“'||offer_row.product_title||'” uyuşmazlık dosyası gerekli aktarımlar tamamlandıktan sonra kapatıldı.'
     else
       '“'||offer_row.product_title||'” uyuşmazlık dosyası güncellendi.'
-  end;
+  end);
 
   for recipient in
     select distinct user_id
