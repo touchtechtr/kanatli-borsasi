@@ -17,6 +17,40 @@ import { PageHeader } from "@/components/ui/PlatformUI";
 
 type OfferStatus =
   "beklemede" | "kabul_edildi" | "reddedildi" | "iptal_edildi" | "tamamlandi";
+type DisputeOrder = {
+  settlement_kind: "buyer_refund" | "seller_payout";
+  attempt_no: number;
+  provider: string;
+  gross_amount: number;
+  transfer_fee: number;
+  net_amount: number;
+  status: string;
+  provider_reference: string | null;
+};
+
+type DisputeDecision = {
+  decision_type: "tam_iade" | "tam_satici" | "kismi_paylasim";
+  status: string;
+  buyer_total: number;
+  buyer_refund_amount: number;
+  seller_payout_amount: number;
+  platform_commission_amount: number;
+  reason: string;
+  decided_at: string;
+  completed_at: string | null;
+  settlement_orders: DisputeOrder[] | DisputeOrder | null;
+};
+
+type DeliveryDispute = {
+  id: string;
+  status: string;
+  reason: string;
+  admin_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  decision: DisputeDecision | DisputeDecision[] | null;
+};
+
 type Offer = {
   id: string;
   listing_kind: "listing" | "feed" | "livestock";
@@ -38,7 +72,7 @@ type Offer = {
   buyerName: string;
   sellerName: string;
   delivery_confirmations: { party: "seller" | "buyer"; confirmed_at: string }[];
-  delivery_disputes: { status: string; reason: string; created_at: string }[];
+  delivery_disputes: DeliveryDispute[];
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -96,7 +130,7 @@ export default function CompanyOffersPage() {
     const { data, error } = await supabase
       .from("trade_offers")
       .select(
-        "id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, seller_unit_price, buyer_unit_price, subtotal_amount, commission_amount, total_amount, message, status, admin_status, created_at, delivery_confirmations:trade_delivery_confirmations(party,confirmed_at), delivery_disputes:trade_delivery_disputes(status,reason,created_at)",
+        "id, listing_kind, listing_id, buyer_company_id, seller_company_id, product_title, offered_quantity, unit, seller_unit_price, buyer_unit_price, subtotal_amount, commission_amount, total_amount, message, status, admin_status, created_at, delivery_confirmations:trade_delivery_confirmations(party,confirmed_at), delivery_disputes:trade_delivery_disputes(id,status,reason,admin_note,created_at,resolved_at,decision:trade_dispute_decisions(decision_type,status,buyer_total,buyer_refund_amount,seller_payout_amount,platform_commission_amount,reason,decided_at,completed_at,settlement_orders:trade_dispute_settlement_orders(settlement_kind,attempt_no,provider,gross_amount,transfer_fee,net_amount,status,provider_reference)))",
       )
       .or(
         `buyer_company_id.eq.${companyData.id},seller_company_id.eq.${companyData.id}`,
@@ -465,6 +499,9 @@ export default function CompanyOffersPage() {
                       })()}
                     </div>
                   </div>
+                  {offer.delivery_disputes?.[0] && (
+                    <DisputeSummary dispute={offer.delivery_disputes[0]} />
+                  )}
                 </article>
               );
             })
@@ -478,6 +515,103 @@ export default function CompanyOffersPage() {
         )}
       </div>
     </main>
+  );
+}
+
+
+function DisputeSummary({ dispute }: { dispute: DeliveryDispute }) {
+  const decision = Array.isArray(dispute.decision)
+    ? dispute.decision[0] ?? null
+    : dispute.decision;
+  const orders = !decision?.settlement_orders
+    ? []
+    : Array.isArray(decision.settlement_orders)
+      ? decision.settlement_orders
+      : [decision.settlement_orders];
+  const completedFee = orders
+    .filter((order) => order.status === "tamamlandi")
+    .reduce((sum, order) => sum + Number(order.transfer_fee || 0), 0);
+  const decisionLabel =
+    decision?.decision_type === "tam_iade"
+      ? "Tam iade"
+      : decision?.decision_type === "tam_satici"
+        ? "Satıcı lehine sonuçlandı"
+        : decision?.decision_type === "kismi_paylasim"
+          ? "Kısmi paylaşım"
+          : null;
+
+  return (
+    <div className="mt-5 border-t border-slate-100 pt-5">
+      <div className={
+        "rounded-2xl border p-4 " +
+        (dispute.status === "acik"
+          ? "border-red-200 bg-red-50"
+          : "border-violet-200 bg-violet-50")
+      }>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wide text-violet-600">
+              Güvenli ticaret uyuşmazlığı
+            </p>
+            <h3 className="mt-1 font-extrabold text-slate-900">
+              {dispute.status === "acik"
+                ? "Yönetim incelemesi sürüyor"
+                : decisionLabel ?? "Karar ve aktarım süreci"}
+            </h3>
+          </div>
+          <span className={
+            "rounded-full px-2.5 py-1 text-[10px] font-black " +
+            (dispute.status === "kapatildi"
+              ? "bg-emerald-100 text-emerald-700"
+              : dispute.status === "acik"
+                ? "bg-red-100 text-red-700"
+                : "bg-amber-100 text-amber-800")
+          }>
+            {dispute.status === "kapatildi" ? "Dosya kapandı" : dispute.status === "acik" ? "Karar bekleniyor" : "Aktarım sürüyor"}
+          </span>
+        </div>
+
+        <p className="mt-3 text-sm leading-6 text-slate-700">
+          <strong>Bildirim:</strong> {dispute.reason}
+        </p>
+
+        {decision ? (
+          <>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <Metric label="Havuz" value={money(decision.buyer_total)} />
+              <Metric label="Alıcı iadesi" value={money(decision.buyer_refund_amount)} />
+              <Metric label="Satıcı ödemesi" value={money(decision.seller_payout_amount)} />
+              <Metric label="Komisyon" value={money(decision.platform_commission_amount)} />
+              <Metric label="Tamamlanan masraf" value={money(completedFee)} />
+            </div>
+            <p className="mt-3 rounded-xl bg-white/70 p-3 text-xs leading-5 text-slate-700">
+              <strong>Yönetim kararı:</strong> {decision.reason}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {orders.map((order) => (
+                <span
+                  key={order.settlement_kind + "-" + order.attempt_no}
+                  className={
+                    "rounded-full px-2.5 py-1 text-[10px] font-bold " +
+                    (order.status === "tamamlandi"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : order.status === "hata"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-blue-100 text-blue-700")
+                  }
+                >
+                  {order.settlement_kind === "buyer_refund" ? "Alıcı iadesi" : "Satıcı ödemesi"} · Deneme {order.attempt_no} · {order.status === "tamamlandi" ? "Tamamlandı" : order.status === "hata" ? "Başarısız" : "İşleniyor"}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="mt-3 text-xs font-semibold text-red-700">
+            Para havuzda korunuyor. Yönetim gerekçeli karar vermeden aktarım yapılmaz.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
