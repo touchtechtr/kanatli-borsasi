@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/ui/PlatformUI";
+import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
 
 type OfferStatus =
   "beklemede" | "kabul_edildi" | "reddedildi" | "iptal_edildi" | "tamamlandi";
@@ -320,7 +321,10 @@ export default function CompanyOffersPage() {
       p_reason: reason,
     });
     if (error) setErrorMessage("Uyuşmazlık açılamadı: " + error.message);
-    else await loadOffers();
+    else {
+      await dispatchNotificationEmails(supabase);
+      await loadOffers();
+    }
     setProcessingId(null);
   };
 
