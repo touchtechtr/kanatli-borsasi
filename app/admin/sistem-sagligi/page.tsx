@@ -53,6 +53,15 @@ type LogisticsHealth={
   legacy_plaintext_codes:number;
   missing_or_mismatched_secrets:number;
 };
+type LogisticsDisputeHealth={
+  checked_at:string;
+  open_disputes:number;
+  allocation_mismatches:number;
+  closed_with_incomplete_settlement:number;
+  duplicate_completed_legs:number;
+  active_failed_settlements:number;
+  completed_state_mismatches:number;
+};
 type CheckRow={label:string;value:number;description:string;href:string};
 
 export default function AdminSystemHealthPage(){
@@ -62,27 +71,30 @@ export default function AdminSystemHealthPage(){
   const[readiness,setReadiness]=useState<ReadinessHealth|null>(null);
   const[disputes,setDisputes]=useState<DisputeHealth|null>(null);
   const[logistics,setLogistics]=useState<LogisticsHealth|null>(null);
+  const[logisticsDisputes,setLogisticsDisputes]=useState<LogisticsDisputeHealth|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<string|null>(null);
 
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
-    const[coreResult,lifecycleResult,readinessResult,disputeResult,logisticsResult]=await Promise.all([
+    const[coreResult,lifecycleResult,readinessResult,disputeResult,logisticsResult,logisticsDisputeResult]=await Promise.all([
       supabase.rpc("admin_system_integrity_health"),
       supabase.rpc("admin_listing_lifecycle_health"),
       supabase.rpc("admin_production_readiness_health"),
       supabase.rpc("admin_trade_dispute_health"),
-      supabase.rpc("admin_logistics_finance_health")
+      supabase.rpc("admin_logistics_finance_health"),
+      supabase.rpc("admin_logistics_dispute_health")
     ]);
-    const loadError=coreResult.error||lifecycleResult.error||readinessResult.error||disputeResult.error||logisticsResult.error;
+    const loadError=coreResult.error||lifecycleResult.error||readinessResult.error||disputeResult.error||logisticsResult.error||logisticsDisputeResult.error;
     if(loadError){
-      setError(loadError.message);setData(null);setLifecycle(null);setReadiness(null);setDisputes(null);setLogistics(null);
+      setError(loadError.message);setData(null);setLifecycle(null);setReadiness(null);setDisputes(null);setLogistics(null);setLogisticsDisputes(null);
     }else{
       setData(coreResult.data as HealthData);
       setLifecycle(lifecycleResult.data as LifecycleHealth);
       setReadiness(readinessResult.data as ReadinessHealth);
       setDisputes(disputeResult.data as DisputeHealth);
       setLogistics(logisticsResult.data as LogisticsHealth);
+      setLogisticsDisputes(logisticsDisputeResult.data as LogisticsDisputeHealth);
     }
     setLoading(false);
   },[supabase]);
@@ -128,6 +140,14 @@ export default function AdminSystemHealthPage(){
       {label:"Lojistik masraf muhasebesi farkı",value:logistics.transfer_fee_ledger_mismatches,description:"Başarılı banka aktarım masrafı ile cüzdan kaydı eşleşmeyen ödemeler.",href:"/admin/lojistik"},
       {label:"Açık metin teslimat kodu",value:logistics.legacy_plaintext_codes,description:"Güvenli kasa dışında eski düz metin yükleme veya teslimat kodu bulunan dosyalar.",href:"/admin/lojistik"},
       {label:"Eksik lojistik kod kasası",value:logistics.missing_or_mismatched_secrets,description:"Teslimat kod kasası olmayan veya talep sahibiyle eşleşmeyen taşıma dosyaları.",href:"/admin/lojistik"}
+    ]:[]),
+    ...(logisticsDisputes?[
+      {label:"Açık lojistik uyuşmazlığı",value:logisticsDisputes.open_disputes,description:"Yönetimin gerekçeli kararını bekleyen lojistik dosyaları.",href:"/admin/lojistik"},
+      {label:"Lojistik uyuşmazlık dağılım farkı",value:logisticsDisputes.allocation_mismatches,description:"İade, nakliyeci ödemesi ve komisyon toplamı havuzla eşleşmeyen kararlar.",href:"/admin/lojistik"},
+      {label:"Eksik aktarımla kapanan lojistik dosyası",value:logisticsDisputes.closed_with_incomplete_settlement,description:"Gerekli ödeme ayakları tamamlanmadan kapatılmış uyuşmazlıklar.",href:"/admin/lojistik"},
+      {label:"Mükerrer lojistik uyuşmazlık aktarımı",value:logisticsDisputes.duplicate_completed_legs,description:"Aynı karar ayağı için birden fazla başarılı banka aktarımı.",href:"/admin/lojistik"},
+      {label:"Çözümlenmemiş uyuşmazlık aktarım hatası",value:logisticsDisputes.active_failed_settlements,description:"Hatalı denemeden sonra etkin yedek aktarımı bulunmayan kararlar.",href:"/admin/lojistik"},
+      {label:"Lojistik karar–ödeme durum farkı",value:logisticsDisputes.completed_state_mismatches,description:"Tamamlanan karar, dosya ve ödeme durumları birbirini doğrulamıyor.",href:"/admin/lojistik"}
     ]:[]),
     ...(readiness?[
       {label:"RLS kapalı tablo",value:readiness.security.rls_disabled_tables,description:"Public şemada satır güvenliği etkin olmayan tablolar.",href:"/admin/sistem-sagligi"},
