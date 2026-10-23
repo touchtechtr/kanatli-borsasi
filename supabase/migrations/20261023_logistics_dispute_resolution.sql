@@ -169,6 +169,13 @@ begin
   if coalesce(p_buyer_refund,-1)<0 or coalesce(p_carrier_payout,-1)<0 or coalesce(p_platform_commission,-1)<0 then
     raise exception 'Karar tutarları negatif olamaz.';
   end if;
+  if p_buyer_refund>p.buyer_total or p_carrier_payout>p.carrier_amount
+     or p_platform_commission>p.commission_amount then
+    raise exception 'Karar tutarları ödeme bileşenlerinin üst sınırını aşamaz.';
+  end if;
+  if p_buyer_refund=0 and p_carrier_payout=0 then
+    raise exception 'En az bir alıcı iadesi veya nakliyeci ödemesi bulunmalıdır.';
+  end if;
   if round(p_buyer_refund+p_carrier_payout+p_platform_commission,2)<>round(p.buyer_total,2) then
     raise exception 'İade, nakliyeci ödemesi ve komisyon toplamı havuz tutarına eşit olmalıdır.';
   end if;
@@ -460,7 +467,7 @@ revoke all on function public.dispute_logistics_delivery(uuid,text) from public,
 revoke all on function public.admin_resolve_logistics_dispute(uuid,numeric,numeric,numeric,text) from public,anon;
 revoke all on function public.admin_create_logistics_dispute_transfer(uuid,text,text,numeric,text,integer,text) from public,anon;
 revoke all on function public.admin_process_logistics_dispute_transfer(uuid,text,text,text) from public,anon;
-revoke all on function public.finalize_logistics_dispute(uuid) from public,anon;
+revoke all on function public.finalize_logistics_dispute(uuid) from public,anon,authenticated;
 revoke all on function public.admin_logistics_dispute_health() from public,anon;
 grant execute on function public.dispute_logistics_delivery(uuid,text) to authenticated;
 grant execute on function public.admin_resolve_logistics_dispute(uuid,numeric,numeric,numeric,text) to authenticated;
