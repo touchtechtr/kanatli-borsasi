@@ -88,7 +88,7 @@ export default function AdminLogisticsPage(){
     if(result.error){setError(result.error.message);return}
     window.open(result.data.signedUrl,"_blank","noopener,noreferrer");
   };
-  const run=async(key:string,work:()=>Promise<{error:{message:string}|null}>)=>{
+  const run=async(key:string,work:()=>PromiseLike<{error:{message:string}|null}>)=>{
     setBusy(key);setError(null);const result=await work();setBusy(null);
     if(result.error){setError(result.error.message);return}
     await load();
