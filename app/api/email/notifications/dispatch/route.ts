@@ -23,6 +23,18 @@ export async function POST(request: Request) {
     /\/$/,
     "",
   );
+  const body = await request.json().catch(() => ({})) as {
+    limit?: number;
+    outboxId?: string;
+  };
+  const requestedLimit = Number(body.limit ?? 25);
+  const batchLimit = Number.isFinite(requestedLimit)
+    ? Math.min(25, Math.max(1, Math.trunc(requestedLimit)))
+    : 25;
+  const outboxId =
+    typeof body.outboxId === "string" && /^[0-9a-f-]{36}$/i.test(body.outboxId)
+      ? body.outboxId
+      : null;
 
   if (!token) {
     return Response.json({ error: "Oturum bulunamadı." }, { status: 401 });
@@ -72,7 +84,11 @@ export async function POST(request: Request) {
     .in("status", ["beklemede", "hata"])
     .lt("attempt_count", 4)
     .order("created_at", { ascending: true })
-    .limit(25);
+    .limit(outboxId ? 1 : batchLimit);
+
+  if (outboxId) {
+    queueQuery = queueQuery.eq("id", outboxId);
+  }
 
   // Yöneticiler genel kuyruğu, diğer kullanıcılar yalnızca kendi e-postalarını
   // çalıştırabilir. E-posta içeriği veritabanı tarafından üretildiği için
@@ -128,5 +144,5 @@ export async function POST(request: Request) {
         .eq("id", row.id);
     }
   }
-  return Response.json({ processed: (rows ?? []).length, sent, failed, mode });
+  return Response.json({ processed: (rows ?? []).length, sent, failed, mode, requestedOutboxId: outboxId });
 }
