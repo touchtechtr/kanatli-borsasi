@@ -41,6 +41,18 @@ type DisputeHealth={
   completed_state_mismatches:number;
   active_failed_settlements:number;
 };
+type LogisticsHealth={
+  checked_at:string;
+  payment_amount_mismatches:number;
+  completed_without_payment:number;
+  released_without_complete_ledger:number;
+  duplicate_completed_transfers:number;
+  active_failed_transfers:number;
+  completed_state_mismatches:number;
+  transfer_fee_ledger_mismatches:number;
+  legacy_plaintext_codes:number;
+  missing_or_mismatched_secrets:number;
+};
 type CheckRow={label:string;value:number;description:string;href:string};
 
 export default function AdminSystemHealthPage(){
@@ -49,25 +61,28 @@ export default function AdminSystemHealthPage(){
   const[lifecycle,setLifecycle]=useState<LifecycleHealth|null>(null);
   const[readiness,setReadiness]=useState<ReadinessHealth|null>(null);
   const[disputes,setDisputes]=useState<DisputeHealth|null>(null);
+  const[logistics,setLogistics]=useState<LogisticsHealth|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState<string|null>(null);
 
   const load=useCallback(async()=>{
     setLoading(true);setError(null);
-    const[coreResult,lifecycleResult,readinessResult,disputeResult]=await Promise.all([
+    const[coreResult,lifecycleResult,readinessResult,disputeResult,logisticsResult]=await Promise.all([
       supabase.rpc("admin_system_integrity_health"),
       supabase.rpc("admin_listing_lifecycle_health"),
       supabase.rpc("admin_production_readiness_health"),
-      supabase.rpc("admin_trade_dispute_health")
+      supabase.rpc("admin_trade_dispute_health"),
+      supabase.rpc("admin_logistics_finance_health")
     ]);
-    const loadError=coreResult.error||lifecycleResult.error||readinessResult.error||disputeResult.error;
+    const loadError=coreResult.error||lifecycleResult.error||readinessResult.error||disputeResult.error||logisticsResult.error;
     if(loadError){
-      setError(loadError.message);setData(null);setLifecycle(null);setReadiness(null);setDisputes(null);
+      setError(loadError.message);setData(null);setLifecycle(null);setReadiness(null);setDisputes(null);setLogistics(null);
     }else{
       setData(coreResult.data as HealthData);
       setLifecycle(lifecycleResult.data as LifecycleHealth);
       setReadiness(readinessResult.data as ReadinessHealth);
       setDisputes(disputeResult.data as DisputeHealth);
+      setLogistics(logisticsResult.data as LogisticsHealth);
     }
     setLoading(false);
   },[supabase]);
@@ -102,6 +117,17 @@ export default function AdminSystemHealthPage(){
       {label:"Uyuşmazlık masraf muhasebesi farkı",value:disputes.settlement_fee_ledger_mismatches,description:"Yalnız tamamlanan aktarım masraflarıyla cüzdan muhasebesi eşleşmeyen kararlar.",href:"/admin/finans/uyusmazliklar"},
       {label:"Karar–ödeme durum uyuşmazlığı",value:disputes.completed_state_mismatches,description:"Tamamlanan karar ile uyuşmazlık, teklif veya ödeme durumu birbirini doğrulamıyor.",href:"/admin/finans/uyusmazliklar"},
       {label:"Çözümlenmemiş aktarım hatası",value:disputes.active_failed_settlements,description:"Hatalı aktarımından sonra başarılı yedek aktarımı bulunmayan uyuşmazlık dosyaları.",href:"/admin/finans/uyusmazliklar"}
+    ]:[]),
+    ...(logistics?[
+      {label:"Lojistik ödeme tutar farkı",value:logistics.payment_amount_mismatches,description:"Nakliyeci alacağı ve komisyon toplamı alıcı toplamıyla eşleşmeyen ödemeler.",href:"/admin/lojistik"},
+      {label:"Ödemesiz tamamlanan nakliye",value:logistics.completed_without_payment,description:"Tamamlandığı halde ödeme kaydı bulunmayan taşıma dosyaları.",href:"/admin/lojistik"},
+      {label:"Eksik lojistik cüzdan kaydı",value:logistics.released_without_complete_ledger,description:"Serbest bırakıldığı halde alıcı, nakliyeci veya komisyon muhasebesi eksik ödemeler.",href:"/admin/lojistik"},
+      {label:"Mükerrer başarılı lojistik aktarımı",value:logistics.duplicate_completed_transfers,description:"Aynı lojistik ödemesi için birden fazla başarılı banka aktarımı.",href:"/admin/lojistik"},
+      {label:"Çözümlenmemiş lojistik aktarım hatası",value:logistics.active_failed_transfers,description:"Başarısız denemeden sonra etkin veya tamamlanmış yedek aktarımı olmayan ödemeler.",href:"/admin/lojistik"},
+      {label:"Lojistik durum uyuşmazlığı",value:logistics.completed_state_mismatches,description:"Ödeme, taşıma ve talep tamamlanma durumları birbirini doğrulamayan dosyalar.",href:"/admin/lojistik"},
+      {label:"Lojistik masraf muhasebesi farkı",value:logistics.transfer_fee_ledger_mismatches,description:"Başarılı banka aktarım masrafı ile cüzdan kaydı eşleşmeyen ödemeler.",href:"/admin/lojistik"},
+      {label:"Açık metin teslimat kodu",value:logistics.legacy_plaintext_codes,description:"Güvenli kasa dışında eski düz metin yükleme veya teslimat kodu bulunan dosyalar.",href:"/admin/lojistik"},
+      {label:"Eksik lojistik kod kasası",value:logistics.missing_or_mismatched_secrets,description:"Teslimat kod kasası olmayan veya talep sahibiyle eşleşmeyen taşıma dosyaları.",href:"/admin/lojistik"}
     ]:[]),
     ...(readiness?[
       {label:"RLS kapalı tablo",value:readiness.security.rls_disabled_tables,description:"Public şemada satır güvenliği etkin olmayan tablolar.",href:"/admin/sistem-sagligi"},
