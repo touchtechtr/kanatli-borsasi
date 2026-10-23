@@ -350,7 +350,7 @@ begin
     status=case when d.carrier_payout_amount>0 then 'tamamlandi' else 'aktif' end,
     updated_at=timezone('utc',now()) where id=x.request_id;
   if d.carrier_payout_amount=0 then
-    update public.logistics_quotes set status='reddedildi',updated_at=timezone('utc',now')
+    update public.logistics_quotes set status='reddedildi',updated_at=timezone('utc',now())
     where id=(select quote_id from public.logistics_deliveries where id=d.delivery_id);
   end if;
 
