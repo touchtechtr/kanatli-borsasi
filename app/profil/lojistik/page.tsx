@@ -6,6 +6,7 @@ import { FileUp, Plus, RefreshCw, Send, ShieldCheck, Truck } from "lucide-react"
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader, PageShell, StatusBadge, SurfaceCard } from "@/components/ui/PlatformUI";
 import CompanyLogisticsFiles from "@/components/logistics/CompanyLogisticsFiles";
+import CompanyLogisticsDisputes from "@/components/logistics/CompanyLogisticsDisputes";
 
 type Vehicle={id:string;plate:string;vehicle_type:string;brand_model:string|null;capacity:number;capacity_unit:string;status:string;admin_note:string|null};
 type Capability={vehicle_id:string;capability:string};
@@ -67,6 +68,7 @@ export default function LogisticsProfilePage(){
   {!access.active&&<SurfaceCard className="border-amber-200 bg-amber-50/70">
    <div className="flex gap-3"><ShieldCheck className="h-6 w-6 text-amber-600"/><div><h2 className="font-black text-slate-900">Önce nakliye faaliyetini onaylatın</h2><p className="mt-1 text-sm text-slate-600">Taşıma yetki belgesi, firma kaydı, yetkili kimliği ve sorumluluk sigortası admin tarafından incelenir.</p><Link href="/profil/faaliyetler?activity=logistics_operator" className="ui-button ui-button--primary mt-4">Faaliyet başvurusuna git</Link></div></div>
   </SurfaceCard>}
+  {access.active&&<CompanyLogisticsDisputes/>}
   {access.active&&<CompanyLogisticsFiles/>}
   {access.active&&<SurfaceCard>
    <h2 className="ui-section-title">Yeni araç kaydı</h2><p className="ui-section-description">Araç onaylandıktan sonra yalnızca seçilen taşıma türlerinde ilan ve teklif verebilir.</p>
