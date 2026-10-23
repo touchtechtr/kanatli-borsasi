@@ -101,7 +101,7 @@ grant select on public.logistics_disputes,public.logistics_dispute_decisions,
   public.logistics_dispute_transfers to authenticated;
 
 create or replace function public.dispute_logistics_delivery(p_delivery_id uuid,p_reason text)
-returns uuid
+returns void
 language plpgsql security definer set search_path=public
 as $$
 declare
@@ -143,9 +143,9 @@ begin
   ) values(d.id,p.id,'uyusmazlik_acildi',d.status,'uyusmazlik',auth.uid(),
     jsonb_build_object('dispute_id',dispute_id,'reason',trim(p_reason)));
 
-  return dispute_id;
+  return;
 end;
-$$;
+$;
 
 create or replace function public.admin_resolve_logistics_dispute(
   p_dispute_id uuid,p_buyer_refund numeric,p_carrier_payout numeric,
