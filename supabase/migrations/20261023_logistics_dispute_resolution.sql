@@ -103,7 +103,7 @@ grant select on public.logistics_disputes,public.logistics_dispute_decisions,
 create or replace function public.dispute_logistics_delivery(p_delivery_id uuid,p_reason text)
 returns void
 language plpgsql security definer set search_path=public
-as $$
+as $function$
 declare
   d public.logistics_deliveries%rowtype;
   p public.logistics_payments%rowtype;
@@ -145,7 +145,7 @@ begin
 
   return;
 end;
-$$;
+$function$;
 
 create or replace function public.admin_resolve_logistics_dispute(
   p_dispute_id uuid,p_buyer_refund numeric,p_carrier_payout numeric,
@@ -153,7 +153,7 @@ create or replace function public.admin_resolve_logistics_dispute(
 )
 returns uuid
 language plpgsql security definer set search_path=public
-as $$
+as $function$
 declare
   x public.logistics_disputes%rowtype;
   p public.logistics_payments%rowtype;
@@ -206,7 +206,7 @@ begin
 
   return decision_id;
 end;
-$$;
+$function$;
 
 create or replace function public.admin_create_logistics_dispute_transfer(
   p_decision_id uuid,p_leg_type text,p_provider text default 'manuel',
@@ -215,7 +215,7 @@ create or replace function public.admin_create_logistics_dispute_transfer(
 )
 returns uuid
 language plpgsql security definer set search_path=public
-as $$
+as $function$
 declare
   d public.logistics_dispute_decisions%rowtype;
   x public.logistics_disputes%rowtype;
@@ -272,12 +272,12 @@ begin
 
   return order_id;
 end;
-$$;
+$function$;
 
 create or replace function public.finalize_logistics_dispute(p_decision_id uuid)
 returns boolean
 language plpgsql security definer set search_path=public
-as $$
+as $function$
 declare
   d public.logistics_dispute_decisions%rowtype;
   x public.logistics_disputes%rowtype;
@@ -381,14 +381,14 @@ begin
       'platform_commission',d.platform_commission_amount));
   return true;
 end;
-$$;
+$function$;
 
 create or replace function public.admin_process_logistics_dispute_transfer(
   p_transfer_id uuid,p_action text,p_reference text default null,p_note text default null
 )
 returns void
 language plpgsql security definer set search_path=public
-as $$
+as $function$
 declare
   o public.logistics_dispute_transfers%rowtype;
   reference_value text;
@@ -431,11 +431,11 @@ begin
     raise exception 'Geçersiz aktarım işlemi.';
   end if;
 end;
-$$;
+$function$;
 
 create or replace function public.admin_logistics_dispute_health()
 returns jsonb language plpgsql security definer stable set search_path=public
-as $$
+as $function$
 begin
   if not public.is_platform_admin() then raise exception 'Yönetici yetkisi gerekiyor.'; end if;
   return jsonb_build_object(
@@ -461,7 +461,7 @@ begin
       where d.status='tamamlandi' and (x.status<>'kapatildi' or p.transfer_status<>'tamamlandi'))
   );
 end;
-$$;
+$function$;
 
 revoke all on function public.dispute_logistics_delivery(uuid,text) from public,anon;
 revoke all on function public.admin_resolve_logistics_dispute(uuid,numeric,numeric,numeric,text) from public,anon;
