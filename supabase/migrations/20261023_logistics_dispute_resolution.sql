@@ -145,7 +145,7 @@ begin
 
   return;
 end;
-$;
+$$;
 
 create or replace function public.admin_resolve_logistics_dispute(
   p_dispute_id uuid,p_buyer_refund numeric,p_carrier_payout numeric,
