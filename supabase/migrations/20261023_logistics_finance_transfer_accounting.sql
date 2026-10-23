@@ -321,7 +321,7 @@ begin
     transaction_type,direction,amount,description
   ) values(
     requester_wallet,p.requester_company_id,p.delivery_id,
-    'logistics_expense','debit',p.buyer_total,'Nakliye hizmet bedeli'
+    'purchase_expense','debit',p.buyer_total,'Nakliye hizmet bedeli'
   ) on conflict do nothing;
 
   insert into public.wallet_transactions(
@@ -329,7 +329,7 @@ begin
     transaction_type,direction,amount,description
   ) values(
     carrier_wallet,p.carrier_company_id,p.delivery_id,
-    'logistics_income','credit',p.carrier_amount,'Nakliye hizmet geliri'
+    'sale_income','credit',p.carrier_amount,'Nakliye hizmet geliri'
   ) on conflict do nothing;
 
   if p.commission_amount>0 then
@@ -338,7 +338,7 @@ begin
       transaction_type,direction,amount,description
     ) values(
       platform_wallet,null,p.delivery_id,
-      'logistics_commission','credit',p.commission_amount,'Nakliye platform komisyonu'
+      'platform_commission','credit',p.commission_amount,'Nakliye platform komisyonu'
     ) on conflict do nothing;
   end if;
 
@@ -349,7 +349,7 @@ begin
       transaction_type,direction,amount,description
     ) values(
       fee_wallet,case when o.fee_payer='carrier' then p.carrier_company_id else null end,
-      p.delivery_id,'logistics_transfer_fee','debit',o.transfer_fee,
+      p.delivery_id,'transfer_fee','debit',o.transfer_fee,
       'Nakliye banka/aktarım masrafı'
     ) on conflict do nothing;
   end if;
