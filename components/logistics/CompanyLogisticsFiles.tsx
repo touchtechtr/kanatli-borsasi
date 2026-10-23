@@ -67,7 +67,7 @@ export default function CompanyLogisticsFiles(){
 
   useEffect(()=>{void load()},[load]);
   const companyName=(id:string)=>companies.find(c=>c.id===id)?.name||"Şirket";
-  const run=async(key:string,work:()=>Promise<{error:{message:string}|null}>)=>{
+  const run=async(key:string,work:()=>PromiseLike<{error:{message:string}|null}>)=>{
     setBusy(key);setError(null);setMessage(null);const result=await work();setBusy(null);
     if(result.error){setError(result.error.message);return}
     setMessage("Nakliye dosyası güncellendi.");await load();
