@@ -278,7 +278,9 @@ declare
   requester_wallet uuid;
   carrier_wallet uuid;
   platform_wallet uuid;
-  o record;
+  platform_fee numeric(14,2);
+  requester_fee numeric(14,2);
+  carrier_fee numeric(14,2);
 begin
   select * into d from public.logistics_dispute_decisions where id=p_decision_id for update;
   if not found or d.status='tamamlandi' then return false; end if;
@@ -314,19 +316,29 @@ begin
     values(platform_wallet,null,d.delivery_id,'platform_commission','credit',d.platform_commission_amount,'Nakliye uyuşmazlığı platform komisyonu')
     on conflict do nothing;
   end if;
-  for o in select * from public.logistics_dispute_transfers where decision_id=d.id and status='tamamlandi'
-  loop
-    if o.transfer_fee>0 then
-      insert into public.wallet_transactions(wallet_account_id,company_id,logistics_delivery_id,transaction_type,direction,amount,description)
-      values(
-        case when o.fee_payer='recipient' and o.leg_type='buyer_refund' then requester_wallet
-             when o.fee_payer='recipient' then carrier_wallet else platform_wallet end,
-        case when o.fee_payer='recipient' and o.leg_type='buyer_refund' then x.requester_company_id
-             when o.fee_payer='recipient' then x.carrier_company_id else null end,
-        d.delivery_id,'transfer_fee','debit',o.transfer_fee,'Nakliye uyuşmazlığı aktarım masrafı'
-      ) on conflict do nothing;
-    end if;
-  end loop;
+  select
+    coalesce(sum(transfer_fee) filter(where fee_payer='platform'),0),
+    coalesce(sum(transfer_fee) filter(where fee_payer='recipient' and leg_type='buyer_refund'),0),
+    coalesce(sum(transfer_fee) filter(where fee_payer='recipient' and leg_type='carrier_payout'),0)
+  into platform_fee,requester_fee,carrier_fee
+  from public.logistics_dispute_transfers
+  where decision_id=d.id and status='tamamlandi';
+
+  if platform_fee>0 then
+    insert into public.wallet_transactions(wallet_account_id,company_id,logistics_delivery_id,transaction_type,direction,amount,description)
+    values(platform_wallet,null,d.delivery_id,'transfer_fee','debit',platform_fee,'Nakliye uyuşmazlığı platform aktarım masrafı')
+    on conflict do nothing;
+  end if;
+  if requester_fee>0 then
+    insert into public.wallet_transactions(wallet_account_id,company_id,logistics_delivery_id,transaction_type,direction,amount,description)
+    values(requester_wallet,x.requester_company_id,d.delivery_id,'transfer_fee','debit',requester_fee,'Nakliye uyuşmazlığı alıcı iade masrafı')
+    on conflict do nothing;
+  end if;
+  if carrier_fee>0 then
+    insert into public.wallet_transactions(wallet_account_id,company_id,logistics_delivery_id,transaction_type,direction,amount,description)
+    values(carrier_wallet,x.carrier_company_id,d.delivery_id,'transfer_fee','debit',carrier_fee,'Nakliye uyuşmazlığı nakliyeci aktarım masrafı')
+    on conflict do nothing;
+  end if;
 
   update public.logistics_dispute_decisions set status='tamamlandi',
     completed_at=timezone('utc',now()),updated_at=timezone('utc',now()) where id=d.id;
