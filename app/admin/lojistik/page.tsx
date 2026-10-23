@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   EmptyState, MetricCard, PageHeader, PageShell, StatusBadge, SurfaceCard,
 } from "@/components/ui/PlatformUI";
+import AdminLogisticsDisputes from "@/components/logistics/AdminLogisticsDisputes";
 
 type Company={id:string;name:string};
 type Vehicle={id:string;company_id:string;plate:string;vehicle_type:string;brand_model:string|null;capacity:number;capacity_unit:string;status:string;admin_note:string|null;created_at:string};
@@ -134,6 +135,8 @@ export default function AdminLogisticsPage(){
       description="Araç uygunluğunu, taşıma dosyalarını, güvenli havuzu ve nakliyeci aktarım sırasını tek merkezden yönetin."
       actions={<button onClick={()=>void load()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4"/>Yenile</button>}/>
     {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+
+    <AdminLogisticsDisputes/>
 
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       <MetricCard label="Araç incelemesi" value={pendingVehicles} helper="Onay bekleyen araç" tone="amber" icon={Truck}/>
