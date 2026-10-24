@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback,useEffect,useMemo,useState } from "react";
-import { CheckCircle2,MapPin,RefreshCw,Truck } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight,CheckCircle2,MapPin,RefreshCw,Truck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { EmptyState,StatusBadge,SurfaceCard } from "@/components/ui/PlatformUI";
 
@@ -10,7 +11,7 @@ const money=(value:number)=>Number(value||0).toLocaleString("tr-TR",{style:"curr
 const label=(value:string)=>value.replaceAll("_"," ");
 const tone=(status:string):"neutral"|"emerald"|"amber"|"red"|"blue"=>status==="aktif"||status==="kabul_edildi"?"emerald":status==="reddedildi"||status==="iptal"?"red":status==="eslesme_yapildi"?"blue":status==="tamamlandi"?"emerald":"amber";
 
-export default function CompanyLogisticsRequests(){
+export default function CompanyLogisticsRequests({compact=false}:{compact?:boolean}){
  const supabase=useMemo(()=>createClient(),[]);
  const[rows,setRows]=useState<Row[]>([]);const[loading,setLoading]=useState(true);const[busy,setBusy]=useState<string|null>(null);const[error,setError]=useState<string|null>(null);const[message,setMessage]=useState<string|null>(null);
  const load=useCallback(async()=>{setLoading(true);setError(null);const result=await supabase.rpc("get_my_logistics_request_quotes");setLoading(false);if(result.error){setError(result.error.message);return}setRows((result.data??[]) as Row[])},[supabase]);
@@ -18,6 +19,8 @@ export default function CompanyLogisticsRequests(){
  const accept=async(row:Row)=>{if(!row.quote_id)return;const ok=window.confirm(`${row.carrier_name||"Nakliyeci"} firmasının ${money(row.amount||0)} tutarındaki teklifini kabul ediyor musunuz? Kabul sonrası ödeme ve taşıma dosyası oluşturulur.`);if(!ok)return;setBusy(row.quote_id);setError(null);setMessage(null);const result=await supabase.rpc("accept_logistics_quote",{p_quote_id:row.quote_id});setBusy(null);if(result.error){setError(result.error.message);return}setMessage("Teklif kabul edildi. Ödeme ve taşıma dosyası oluşturuldu.");await load()};
  const requests=Array.from(new Set(rows.map(x=>x.request_id)));
  if(!loading&&!rows.length&&!error)return null;
+ const pending=rows.filter(x=>x.request_status==="aktif"&&x.quote_status==="beklemede").length;
+ if(compact)return <SurfaceCard className={pending?"border-amber-200 bg-amber-50/70":""}><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="ui-eyebrow">Gelen nakliye teklifleri</p><h2 className="ui-section-title">{pending?`${pending} teklif yanıtınızı bekliyor`:"Bekleyen nakliye teklifi yok"}</h2><p className="ui-section-description">Bütün teklif türlerini merkezi teklif ekranından yönetin.</p></div><Link href="/profil/teklifler?tab=lojistik" className="ui-button ui-button--primary">Teklifleri incele<ArrowRight className="h-4 w-4"/></Link></div></SurfaceCard>;
  return <section className="space-y-4">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="ui-eyebrow">Talep sahibi çalışma alanı</p><h2 className="ui-section-title">Taşıma taleplerim ve gelen teklifler</h2><p className="ui-section-description">Nakliyeci, araç ve teklif tutarını inceleyerek eşleşmeyi buradan yönetin.</p></div><button onClick={()=>void load()} disabled={loading} className="ui-button ui-button--secondary"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/>Yenile</button></div>
   {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
