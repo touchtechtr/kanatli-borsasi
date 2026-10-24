@@ -8,6 +8,8 @@ import { EmptyState,MetricCard,StatusBadge,SurfaceCard } from "@/components/ui/P
 type Dispute={id:string;delivery_id:string;payment_id:string;requester_company_id:string;carrier_company_id:string;reason:string;status:string;opened_at:string;admin_note:string|null};
 type Decision={id:string;dispute_id:string;decision_type:string;buyer_total:number;buyer_refund_amount:number;carrier_payout_amount:number;platform_commission_amount:number;reason:string;status:string};
 type Transfer={id:string;decision_id:string;leg_type:string;attempt_no:number;provider:string;gross_amount:number;net_amount:number;transfer_fee:number;fee_payer:string;status:string;provider_reference:string|null;failure_reason:string|null};
+type Payment={id:string;buyer_total:number;carrier_amount:number;commission_amount:number;status:string;transfer_status:string};
+type Evidence={id:string;delivery_id:string;stage:string;evidence_type:string;original_name:string};
 type Company={id:string;name:string};
 const money=(v:number)=>Number(v||0).toLocaleString("tr-TR",{style:"currency",currency:"TRY"});
 const label=(v:string)=>v.replaceAll("_"," ");
@@ -24,6 +26,8 @@ export default function AdminLogisticsDisputes(){
  const[disputes,setDisputes]=useState<Dispute[]>([]);
  const[decisions,setDecisions]=useState<Decision[]>([]);
  const[transfers,setTransfers]=useState<Transfer[]>([]);
+ const[payments,setPayments]=useState<Payment[]>([]);
+ const[evidence,setEvidence]=useState<Evidence[]>([]);
  const[companies,setCompanies]=useState<Company[]>([]);
  const[loading,setLoading]=useState(true);
  const[busy,setBusy]=useState<string|null>(null);
@@ -32,14 +36,16 @@ export default function AdminLogisticsDisputes(){
 
  const load=useCallback(async()=>{
   setLoading(true);setError(null);
-  const[d,k,t,c]=await Promise.all([
+  const[d,k,t,p,v,c]=await Promise.all([
    supabase.from("logistics_disputes").select("id,delivery_id,payment_id,requester_company_id,carrier_company_id,reason,status,opened_at,admin_note").order("opened_at",{ascending:false}),
    supabase.from("logistics_dispute_decisions").select("id,dispute_id,decision_type,buyer_total,buyer_refund_amount,carrier_payout_amount,platform_commission_amount,reason,status"),
    supabase.from("logistics_dispute_transfers").select("id,decision_id,leg_type,attempt_no,provider,gross_amount,net_amount,transfer_fee,fee_payer,status,provider_reference,failure_reason").order("attempt_no",{ascending:true}),
+   supabase.from("logistics_payments").select("id,buyer_total,carrier_amount,commission_amount,status,transfer_status"),
+   supabase.from("logistics_delivery_evidence").select("id,delivery_id,stage,evidence_type,original_name").order("created_at",{ascending:true}),
    supabase.from("companies").select("id,name")
   ]);
-  const e=d.error||k.error||t.error||c.error;
-  if(e)setError(e.message);else{setDisputes((d.data??[]) as Dispute[]);setDecisions((k.data??[]) as Decision[]);setTransfers((t.data??[]) as Transfer[]);setCompanies((c.data??[]) as Company[])}
+  const e=d.error||k.error||t.error||p.error||v.error||c.error;
+  if(e)setError(e.message);else{setDisputes((d.data??[]) as Dispute[]);setDecisions((k.data??[]) as Decision[]);setTransfers((t.data??[]) as Transfer[]);setPayments((p.data??[]) as Payment[]);setEvidence((v.data??[]) as Evidence[]);setCompanies((c.data??[]) as Company[])}
   setLoading(false);
  },[supabase]);
  useEffect(()=>{void load()},[load]);
@@ -50,9 +56,13 @@ export default function AdminLogisticsDisputes(){
   setMessage("Uyuşmazlık dosyası güncellendi.");await load();return true;
  };
  const decide=async(row:Dispute)=>{
-  const refund=window.prompt("Alıcıya iade edilecek tutar (₺):","0");if(refund===null)return;
-  const carrier=window.prompt("Nakliyeciye ödenecek brüt tutar (₺):","0");if(carrier===null)return;
-  const commission=window.prompt("Platform komisyonu (₺):","0");if(commission===null)return;
+  const payment=payments.find(x=>x.id===row.payment_id);
+  if(!payment){setError("Uyuşmazlığa bağlı ödeme kaydı bulunamadı.");return}
+  const refund=window.prompt(`Alıcıya iade edilecek tutar (havuz: ${money(payment.buyer_total)}):`,"0");if(refund===null)return;
+  const carrier=window.prompt(`Nakliyeciye ödenecek brüt tutar (başlangıç alacağı: ${money(payment.carrier_amount)}):`,String(payment.carrier_amount));if(carrier===null)return;
+  const commission=window.prompt(`Platform komisyonu (başlangıç: ${money(payment.commission_amount)}):`,String(payment.commission_amount));if(commission===null)return;
+  const allocation=Number(refund)+Number(carrier)+Number(commission);
+  if(!Number.isFinite(allocation)||Math.abs(allocation-Number(payment.buyer_total))>0.01){setError(`Dağıtım toplamı ${money(payment.buyer_total)} olmalıdır.`);return}
   const reason=window.prompt("Gerekçeli yönetim kararı (en az 10 karakter):");if(!reason)return;
   await run(row.id,()=>supabase.rpc("admin_resolve_logistics_dispute",{p_dispute_id:row.id,p_buyer_refund:Number(refund),p_carrier_payout:Number(carrier),p_platform_commission:Number(commission),p_reason:reason}));
  };
@@ -81,8 +91,10 @@ export default function AdminLogisticsDisputes(){
   {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
   {message&&<div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">{message}</div>}
   <div className="grid gap-3 sm:grid-cols-3"><MetricCard label="Açık dosya" value={open} helper="Karar bekliyor" icon={Gavel} tone={open?"red":"emerald"}/><MetricCard label="Aktarım bekleyen" value={waiting} helper="Karar veya ödeme ayakları" icon={Banknote} tone={waiting?"amber":"emerald"}/><MetricCard label="Çözümlenmemiş hata" value={failed} helper="Yedek emir gerekli" icon={AlertTriangle} tone={failed?"red":"emerald"}/></div>
-  <div className="space-y-4">{disputes.map(row=>{const decision=decisions.find(x=>x.dispute_id===row.id);const legs=decision?transfers.filter(x=>x.decision_id===decision.id):[];return <SurfaceCard key={row.id}>
-   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap gap-2"><StatusBadge tone={tone(row.status)}>{label(row.status)}</StatusBadge><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">Dosya #{row.id.slice(0,8).toUpperCase()}</span></div><h3 className="mt-3 text-xl font-black">{company(row.requester_company_id)} → {company(row.carrier_company_id)}</h3><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{row.reason}</p><p className="mt-2 text-xs text-slate-400">{new Date(row.opened_at).toLocaleString("tr-TR")}</p></div>{row.status==="acik"&&<button disabled={busy!==null} onClick={()=>void decide(row)} className="ui-button ui-button--primary"><Gavel className="h-4 w-4"/>Gerekçeli karar ver</button>}</div>
+  <div className="space-y-4">{disputes.map(row=>{const decision=decisions.find(x=>x.dispute_id===row.id);const legs=decision?transfers.filter(x=>x.decision_id===decision.id):[];const payment=payments.find(x=>x.id===row.payment_id);const proofs=evidence.filter(x=>x.delivery_id===row.delivery_id);return <SurfaceCard key={row.id}>
+   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap gap-2"><StatusBadge tone={tone(row.status)}>{label(row.status)}</StatusBadge><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black">Dosya #{row.id.slice(0,8).toUpperCase()}</span><span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">{proofs.length} kanıt</span></div><h3 className="mt-3 text-xl font-black">{company(row.requester_company_id)} → {company(row.carrier_company_id)}</h3><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{row.reason}</p><p className="mt-2 text-xs text-slate-400">{new Date(row.opened_at).toLocaleString("tr-TR")}</p></div>{row.status==="acik"&&<button disabled={busy!==null||!payment} onClick={()=>void decide(row)} className="ui-button ui-button--primary"><Gavel className="h-4 w-4"/>Gerekçeli karar ver</button>}</div>
+   {payment&&<div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:grid-cols-4"><Value label="Güvenli havuz" value={money(payment.buyer_total)}/><Value label="Başlangıç nakliyeci alacağı" value={money(payment.carrier_amount)}/><Value label="Başlangıç komisyonu" value={money(payment.commission_amount)}/><Value label="Ödeme durumu" value={`${label(payment.status)} · ${label(payment.transfer_status)}`}/></div>}
+   {proofs.length>0&&<details className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/50 p-4"><summary className="cursor-pointer text-sm font-black text-blue-900">Teslimat kanıtlarını incele ({proofs.length})</summary><div className="mt-3 flex flex-wrap gap-2">{proofs.map(x=><span key={x.id} className="rounded-xl border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-slate-700">{label(x.stage)} · {label(x.evidence_type)} · {x.original_name}</span>)}</div></details>}
    {decision&&<div className="mt-5 rounded-2xl border border-violet-200 bg-violet-50/60 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-black uppercase text-violet-700">{label(decision.decision_type)}</p><p className="mt-1 text-sm font-semibold text-slate-700">{decision.reason}</p></div><StatusBadge tone={tone(decision.status)}>{label(decision.status)}</StatusBadge></div><div className="mt-4 grid gap-3 sm:grid-cols-4"><Value label="Havuz" value={money(decision.buyer_total)}/><Value label="Alıcı iadesi" value={money(decision.buyer_refund_amount)}/><Value label="Nakliyeci ödemesi" value={money(decision.carrier_payout_amount)}/><Value label="Komisyon" value={money(decision.platform_commission_amount)}/></div>
     {decision.status!=="tamamlandi"&&<div className="mt-4 flex flex-wrap gap-2">{decision.buyer_refund_amount>0&&!legs.some(x=>x.leg_type==="buyer_refund"&&["emir_verildi","isleniyor","tamamlandi"].includes(x.status))&&<button disabled={busy!==null} onClick={()=>void createOrder(decision,"buyer_refund")} className="ui-button ui-button--secondary">Alıcı iade emri oluştur</button>}{decision.carrier_payout_amount>0&&!legs.some(x=>x.leg_type==="carrier_payout"&&["emir_verildi","isleniyor","tamamlandi"].includes(x.status))&&<button disabled={busy!==null} onClick={()=>void createOrder(decision,"carrier_payout")} className="ui-button ui-button--secondary">Nakliyeci ödeme emri oluştur</button>}</div>}
    </div>}
