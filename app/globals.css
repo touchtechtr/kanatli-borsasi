@@ -443,18 +443,22 @@
 /* Design-system form and action primitives */
 .ui-input {
   width: 100%;
-  border: 1px solid rgba(var(--ui-border), .9);
+  min-height: 2.9rem;
+  border: 2px solid rgba(var(--ui-border), 1);
   border-radius: .9rem;
-  background: rgba(var(--ui-surface), .96);
+  background: rgba(248, 250, 252, .98);
   padding: .72rem .85rem;
   font-size: .875rem;
   color: rgb(var(--ui-text));
   outline: none;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
+.ui-input:hover { border-color: rgba(var(--ui-primary), .42); background: rgb(var(--ui-surface)); }
+.ui-input::placeholder { color: rgb(100 116 139); opacity: .82; }
 .ui-input:focus {
-  border-color: rgba(var(--ui-primary), .72);
-  box-shadow: 0 0 0 4px rgba(var(--ui-primary), .11);
+  border-color: rgba(var(--ui-primary), .88);
+  background: rgb(var(--ui-surface));
+  box-shadow: 0 0 0 4px rgba(var(--ui-primary), .16);
 }
 .ui-button {
   display: inline-flex;
