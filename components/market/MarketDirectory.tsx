@@ -1,0 +1,52 @@
+"use client";
+
+import { useCallback,useEffect,useMemo,useState } from "react";
+import Link from "next/link";
+import { Building2,MapPin,Package,RefreshCw,Search,Truck } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { EmptyState,PageHeader,PageShell,StatusBadge,SurfaceCard } from "@/components/ui/PlatformUI";
+
+type MarketKey="all"|"yem"|"canli-hayvan"|"zirai"|"kesimhane"|"diger";
+type Item={key:string;market:Exclude<MarketKey,"all">;title:string;category:string;company:string;city:string;quantity:number;unit:string;price:number|null;createdAt:string;href:string;imageUrl:string|null};
+const FEED=["Broyler (Etlik) Yemleri","Yumurta Tavuğu Yemleri","Hammadde & Tahıllar","Katkı Maddeleri"];
+const AGRI=["Gübre & Bitki Besleme","Tohum & Fide","Bitki Koruma Ürünleri","Sulama & Tarım Ekipmanları","Sera & Üretim Malzemeleri"];
+const config:Record<MarketKey,{title:string;description:string;tone:"neutral"|"amber"|"blue"|"emerald"|"violet"}>={
+ all:{title:"Tüm Pazarlar",description:"Bütün aktif ilanları tek merkezden arayın; ardından ilgili uzman pazarına geçin.",tone:"neutral"},
+ yem:{title:"Yem ve Hammadde Pazarı",description:"Fabrika yemi, tahıl, katkı maddesi ve toptan yem ilanları.",tone:"amber"},
+ "canli-hayvan":{title:"Canlı Hayvan Pazarı",description:"Kanatlı, küçükbaş ve büyükbaş satış ilanları.",tone:"blue"},
+ zirai:{title:"Zirai Girdi Pazarı",description:"Gübre, tohum, fide, bitki koruma ve üretim malzemeleri.",tone:"emerald"},
+ kesimhane:{title:"Kesimhane Alım Pazarı",description:"Onaylı kesimhanelerin toplu canlı hayvan alım talepleri.",tone:"violet"},
+ diger:{title:"Diğer Tarımsal İlanlar",description:"Diğer tarımsal ürünler ve desteklenen ticari fırsatlar.",tone:"neutral"},
+};
+const marketClass:Record<Exclude<MarketKey,"all">,string>={yem:"border-amber-200 bg-amber-50/50","canli-hayvan":"border-blue-200 bg-blue-50/50",zirai:"border-emerald-200 bg-emerald-50/50",kesimhane:"border-violet-200 bg-violet-50/50",diger:"border-slate-200 bg-slate-50/70"};
+const marketTone:Record<Exclude<MarketKey,"all">,"neutral"|"amber"|"blue"|"emerald"|"violet">={yem:"amber","canli-hayvan":"blue",zirai:"emerald",kesimhane:"violet",diger:"neutral"};
+const marketLabel:Record<Exclude<MarketKey,"all">,string>={yem:"Yem", "canli-hayvan":"Canlı hayvan",zirai:"Zirai girdi",kesimhane:"Kesimhane alımı",diger:"Diğer"};
+const money=(value:number)=>Number(value||0).toLocaleString("tr-TR",{style:"currency",currency:"TRY"});
+
+export default function MarketDirectory({initialMarket}:{initialMarket:string}){
+ const selected=(Object.keys(config).includes(initialMarket)?initialMarket:"all") as MarketKey;
+ const supabase=useMemo(()=>createClient(),[]);const[items,setItems]=useState<Item[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);const[query,setQuery]=useState("");const[city,setCity]=useState("all");const[sort,setSort]=useState("newest");
+ const load=useCallback(async()=>{setLoading(true);setError(null);const[g,f,l,s]=await Promise.all([
+  supabase.from("listings").select("id,company_id,title,category,quantity,unit,price,city,created_at").eq("status","aktif").order("created_at",{ascending:false}),
+  supabase.from("feed_listings").select("id,company_id,title,category,quantity,unit,price,city,created_at").eq("status","aktif").order("created_at",{ascending:false}),
+  supabase.from("livestock_listings").select("id,company_id,title,animal_type,category,quantity,unit,price,city,created_at").eq("status","aktif").order("created_at",{ascending:false}),
+  supabase.from("public_slaughterhouse_purchase_requests").select("id,company_id,title,animal_type,quantity_required,target_price,city,created_at").order("created_at",{ascending:false}),
+ ]);const e=g.error||f.error||l.error||s.error;if(e){setError(e.message);setLoading(false);return}
+ const raw=[...(g.data??[]).map(x=>({...x,source:"general",href:`/ilan/listings/${x.id}`})),...(f.data??[]).map(x=>({...x,source:"feed",href:`/ilan/feed_listings/${x.id}`})),...(l.data??[]).map(x=>({...x,source:"livestock",href:`/livestock/${x.id}`})),...(s.data??[]).map(x=>({id:x.id,company_id:x.company_id,title:x.title,category:x.animal_type,quantity:x.quantity_required,unit:"Baş",price:x.target_price,city:x.city,created_at:x.created_at,source:"slaughterhouse",href:`/kesimhane/alim-merkezi/${x.id}`}))];
+ const companyIds=[...new Set(raw.map(x=>x.company_id).filter(Boolean))];const ids=raw.filter(x=>x.source!=="slaughterhouse").map(x=>x.id);const[c,i]=await Promise.all([companyIds.length?supabase.from("public_companies").select("id,name").in("id",companyIds):Promise.resolve({data:[],error:null}),ids.length?supabase.from("listing_images").select("listing_id,public_url,position,is_primary").in("listing_id",ids).order("position"):Promise.resolve({data:[],error:null})]);
+ const names=new Map((c.data??[]).map(x=>[x.id,x.name]));const images=new Map<string,string>();for(const image of i.data??[]){if(!images.has(image.listing_id)||image.is_primary)images.set(image.listing_id,image.public_url)}
+ setItems(raw.map(x=>{const market:Exclude<MarketKey,"all">=x.source==="slaughterhouse"?"kesimhane":x.source==="livestock"?"canli-hayvan":x.source==="feed"||FEED.includes(x.category)?"yem":AGRI.includes(x.category)?"zirai":"diger";return{key:`${x.source}:${x.id}`,market,title:x.title,category:x.category,company:names.get(x.company_id)||"Doğrulanmış firma",city:x.city,quantity:Number(x.quantity),unit:x.unit||"Birim",price:x.price==null?null:Number(x.price),createdAt:x.created_at,href:x.href,imageUrl:images.get(x.id)||null}}));setLoading(false)},[supabase]);
+ useEffect(()=>{void load()},[load]);
+ const cities=useMemo(()=>[...new Set(items.map(x=>x.city).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr")),[items]);
+ const filtered=useMemo(()=>items.filter(x=>(selected==="all"||x.market===selected)&&(city==="all"||x.city===city)&&`${x.title} ${x.category} ${x.company} ${x.city}`.toLocaleLowerCase("tr-TR").includes(query.toLocaleLowerCase("tr-TR"))).sort((a,b)=>sort==="price-low"?Number(a.price??Number.MAX_SAFE_INTEGER)-Number(b.price??Number.MAX_SAFE_INTEGER):sort==="price-high"?Number(b.price??0)-Number(a.price??0):new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()),[items,selected,city,query,sort]);
+ const current=config[selected];
+ return <PageShell><PageHeader eyebrow="Kanatlı Borsası pazar ağı" title={current.title} description={current.description} icon={selected==="all"?Search:selected==="kesimhane"?Building2:Package} tone={current.tone} actions={<button onClick={()=>void load()} className="ui-button ui-button--secondary"><RefreshCw className={"h-4 w-4 "+(loading?"animate-spin":"")}/>Yenile</button>}/>
+  <SurfaceCard><div className="flex gap-2 overflow-x-auto pb-1">{(Object.keys(config) as MarketKey[]).map(key=><Link key={key} href={key==="all"?"/pazar":`/pazar/${key}`} className={`ui-button shrink-0 ${selected===key?"ui-button--primary":"ui-button--secondary"}`}>{config[key].title}</Link>)}<Link href="/lojistik" className="ui-button ui-button--secondary shrink-0"><Truck className="h-4 w-4"/>Lojistik Pazarı</Link></div></SurfaceCard>
+  <SurfaceCard><div className="grid gap-3 md:grid-cols-[1fr_220px_220px]"><label><span className="mb-1.5 block text-sm font-black text-slate-700">İlanlarda ara</span><div className="relative"><Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400"/><input value={query} onChange={e=>setQuery(e.target.value)} className="ui-input pl-10" placeholder="Ürün, kategori, firma veya şehir"/></div></label><label><span className="mb-1.5 block text-sm font-black text-slate-700">Şehir</span><select value={city} onChange={e=>setCity(e.target.value)} className="ui-input"><option value="all">Tüm şehirler</option>{cities.map(x=><option key={x}>{x}</option>)}</select></label><label><span className="mb-1.5 block text-sm font-black text-slate-700">Sıralama</span><select value={sort} onChange={e=>setSort(e.target.value)} className="ui-input"><option value="newest">En yeni</option><option value="price-low">Fiyat: düşükten</option><option value="price-high">Fiyat: yüksekten</option></select></label></div></SurfaceCard>
+  {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{error}</div>}
+  <div className="flex items-center justify-between"><div><p className="ui-eyebrow">Aktif kayıtlar</p><h2 className="ui-section-title">{filtered.length} ilan bulundu</h2></div>{selected!=="all"&&<Link href="/pazar" className="ui-button ui-button--secondary">Tüm pazarlarda ara</Link>}</div>
+  {!loading&&!filtered.length?<EmptyState icon={Package} title="İlan bulunamadı" description="Arama sözcüğünü veya şehir filtresini değiştirerek yeniden deneyin."/>:<div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{filtered.map(item=><Link key={item.key} href={item.href} className={`group overflow-hidden rounded-3xl border-2 shadow-lg transition hover:-translate-y-1 ${marketClass[item.market]}`}><div className="aspect-[16/9] overflow-hidden bg-white/70">{item.imageUrl?<img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/>:<div className="flex h-full items-center justify-center"><Package className="h-10 w-10 text-slate-300"/></div>}</div><div className="p-5"><div className="flex items-center justify-between gap-2"><StatusBadge tone={marketTone[item.market]}>{marketLabel[item.market]}</StatusBadge><span className="text-xs font-bold text-slate-400">{new Date(item.createdAt).toLocaleDateString("tr-TR")}</span></div><h3 className="mt-4 line-clamp-2 text-lg font-black text-slate-950">{item.title}</h3><p className="mt-2 text-xs font-bold text-slate-500">{item.company}</p><div className="mt-4 flex items-center gap-2 text-sm text-slate-600"><MapPin className="h-4 w-4"/>{item.city}</div><div className="mt-4 grid grid-cols-2 gap-2"><Value label="Miktar" value={`${item.quantity.toLocaleString("tr-TR")} ${item.unit}`}/><Value label="Fiyat" value={item.price==null?"Teklif usulü":money(item.price)}/></div></div></Link>)}</div>}
+ </PageShell>;
+}
+function Value({label,value}:{label:string;value:string}){return <div className="rounded-xl border border-white/80 bg-white/80 p-3"><p className="text-[10px] font-black uppercase text-slate-400">{label}</p><p className="mt-1 truncate text-sm font-black text-slate-900">{value}</p></div>}
+
