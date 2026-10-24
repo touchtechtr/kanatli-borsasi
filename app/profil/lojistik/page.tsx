@@ -66,10 +66,10 @@ export default function LogisticsProfilePage(){
   {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
   {message&&<div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{message}</div>}
   {!access.active&&<SurfaceCard className="border-amber-200 bg-amber-50/70">
-   <div className="flex gap-3"><ShieldCheck className="h-6 w-6 text-amber-600"/><div><h2 className="font-black text-slate-900">Önce nakliye faaliyetini onaylatın</h2><p className="mt-1 text-sm text-slate-600">Taşıma yetki belgesi, firma kaydı, yetkili kimliği ve sorumluluk sigortası admin tarafından incelenir.</p><Link href="/profil/faaliyetler?activity=logistics_operator" className="ui-button ui-button--primary mt-4">Faaliyet başvurusuna git</Link></div></div>
+   <div className="flex gap-3"><ShieldCheck className="h-6 w-6 text-amber-600"/><div><h2 className="font-black text-slate-900">Nakliyeci olarak hizmet vermek ister misiniz?</h2><p className="mt-1 text-sm text-slate-600">Taşıma talebi sahibi olarak mevcut nakliye dosyalarınızı aşağıdan takip edebilirsiniz. İlan vermek, teklif sunmak ve araç kaydetmek için nakliye faaliyetini ayrıca onaylatmanız gerekir.</p><Link href="/profil/faaliyetler?activity=logistics_operator" className="ui-button ui-button--primary mt-4">Nakliyeci faaliyet başvurusuna git</Link></div></div>
   </SurfaceCard>}
-  {access.active&&<CompanyLogisticsDisputes/>}
-  {access.active&&<CompanyLogisticsFiles/>}
+  {access.company_id&&<CompanyLogisticsDisputes/>}
+  {access.company_id&&<CompanyLogisticsFiles/>}
   {access.active&&<SurfaceCard>
    <h2 className="ui-section-title">Yeni araç kaydı</h2><p className="ui-section-description">Araç onaylandıktan sonra yalnızca seçilen taşıma türlerinde ilan ve teklif verebilir.</p>
    <form onSubmit={save} className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
