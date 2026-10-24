@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { EmptyState,MetricCard,StatusBadge,SurfaceCard } from "@/components/ui/PlatformUI";
 
 type Access={company_id?:string|null};
-type Company={id:string;name:string};
+type DeliveryParty={delivery_id:string;requester_name:string;carrier_name:string};
 type Delivery={id:string;request_id:string;requester_company_id:string;carrier_company_id:string;status:string;payment_status:string;agreed_amount:number;currency:string;created_at:string;completed_at:string|null;dispute_reason:string|null};
 type Payment={id:string;delivery_id:string;status:string;transfer_status:string;carrier_amount:number;commission_amount:number;buyer_total:number;transfer_error:string|null};
 type Transfer={id:string;delivery_id:string;attempt_no:number;provider:string;status:string;transfer_fee:number;fee_payer:string;carrier_net_amount:number;provider_reference:string|null;failure_reason:string|null};
@@ -27,7 +27,7 @@ const tone=(s:string):"neutral"|"violet"|"emerald"|"amber"|"red"|"blue"=>{
 export default function CompanyLogisticsFiles(){
   const supabase=useMemo(()=>createClient(),[]);
   const[companyId,setCompanyId]=useState<string|null>(null);
-  const[companies,setCompanies]=useState<Company[]>([]);
+  const[parties,setParties]=useState<DeliveryParty[]>([]);
   const[deliveries,setDeliveries]=useState<Delivery[]>([]);
   const[payments,setPayments]=useState<Payment[]>([]);
   const[transfers,setTransfers]=useState<Transfer[]>([]);
@@ -52,7 +52,7 @@ export default function CompanyLogisticsFiles(){
       supabase.from("logistics_delivery_events").select("id,delivery_id,event_type,sequence_no,created_at,provider_reference").order("sequence_no",{ascending:true}),
       supabase.from("logistics_delivery_evidence").select("id,delivery_id,stage,evidence_type,original_name,storage_path").order("created_at",{ascending:true}),
       supabase.from("logistics_delivery_secrets").select("delivery_id,pickup_code,delivery_code"),
-      supabase.from("companies").select("id,name"),
+      supabase.rpc("get_my_logistics_delivery_parties"),
     ]);
     const loadError=d.error||p.error||t.error||e.error||k.error||s.error||c.error;
     if(loadError){setError(loadError.message);return}
@@ -62,11 +62,11 @@ export default function CompanyLogisticsFiles(){
     setEvents((e.data??[]) as Event[]);
     setEvidence((k.data??[]) as Evidence[]);
     setSecrets((s.data??[]) as Secret[]);
-    setCompanies((c.data??[]) as Company[]);
+    setParties((c.data??[]) as DeliveryParty[]);
   },[supabase]);
 
   useEffect(()=>{void load()},[load]);
-  const companyName=(id:string)=>companies.find(c=>c.id===id)?.name||"Şirket";
+  const partyFor=(deliveryId:string)=>parties.find(x=>x.delivery_id===deliveryId);
   const run=async(key:string,work:()=>PromiseLike<{error:{message:string}|null}>)=>{
     setBusy(key);setError(null);setMessage(null);const result=await work();setBusy(null);
     if(result.error){setError(result.error.message);return}
@@ -120,12 +120,14 @@ export default function CompanyLogisticsFiles(){
       const fileEvidence=evidence.filter(e=>e.delivery_id===delivery.id);
       const fileTransfers=transfers.filter(t=>t.delivery_id===delivery.id);
       const fileEvents=events.filter(e=>e.delivery_id===delivery.id);
+      const party=partyFor(delivery.id);
+      const terminal=["tamamlandi","iptal","uyusmazlik"].includes(delivery.status);
       return <SurfaceCard key={delivery.id} interactive>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap gap-2"><StatusBadge tone={tone(delivery.status)}>{label(delivery.status)}</StatusBadge><StatusBadge tone={requester?"emerald":"violet"}>{requester?"Talep sahibi":"Nakliyeci"}</StatusBadge>{payment&&<StatusBadge tone={tone(payment.transfer_status)}>Aktarım: {label(payment.transfer_status)}</StatusBadge>}</div><h3 className="mt-3 text-lg font-black">{companyName(delivery.requester_company_id)} → {companyName(delivery.carrier_company_id)}</h3><p className="mt-1 text-xs text-slate-500">Dosya {delivery.id.slice(0,8).toUpperCase()} · {new Date(delivery.created_at).toLocaleString("tr-TR")}</p></div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap gap-2"><StatusBadge tone={tone(delivery.status)}>{label(delivery.status)}</StatusBadge><StatusBadge tone={requester?"emerald":"violet"}>{requester?"Talep sahibi":"Nakliyeci"}</StatusBadge>{payment&&<StatusBadge tone={tone(payment.transfer_status)}>Aktarım: {label(payment.transfer_status)}</StatusBadge>}</div><h3 className="mt-3 text-lg font-black">{party?.requester_name||"Talep sahibi"} → {party?.carrier_name||"Nakliyeci"}</h3><p className="mt-1 text-xs text-slate-500">Dosya {delivery.id.slice(0,8).toUpperCase()} · {new Date(delivery.created_at).toLocaleString("tr-TR")}</p></div>
           {payment&&<div className="grid min-w-[290px] grid-cols-3 gap-2"><SmallValue label={requester?"Toplam":"Brüt"} value={money(requester?payment.buyer_total:payment.carrier_amount)}/><SmallValue label="Komisyon" value={money(payment.commission_amount)}/><SmallValue label="Durum" value={label(payment.status)}/></div>}
         </div>
 
-        {requester&&secret&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="flex items-center gap-2 text-xs font-black uppercase text-amber-800"><KeyRound className="h-4 w-4"/>Yükleme kodu</p><p className="mt-2 text-2xl font-black tracking-[.25em]">{secret.pickup_code}</p><p className="mt-1 text-xs text-amber-800">Araç ve yük hazırken nakliyeciye verin.</p></div><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="flex items-center gap-2 text-xs font-black uppercase text-emerald-800"><KeyRound className="h-4 w-4"/>Teslimat kodu</p><p className="mt-2 text-2xl font-black tracking-[.25em]">{secret.delivery_code}</p><p className="mt-1 text-xs text-emerald-800">Ürünü kontrol etmeden paylaşmayın.</p></div></div>}
+        {requester&&secret&&!terminal&&<div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="flex items-center gap-2 text-xs font-black uppercase text-amber-800"><KeyRound className="h-4 w-4"/>Yükleme kodu</p><p className="mt-2 text-2xl font-black tracking-[.25em]">{secret.pickup_code}</p><p className="mt-1 text-xs text-amber-800">Araç ve yük hazırken nakliyeciye verin.</p></div><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="flex items-center gap-2 text-xs font-black uppercase text-emerald-800"><KeyRound className="h-4 w-4"/>Teslimat kodu</p><p className="mt-2 text-2xl font-black tracking-[.25em]">{secret.delivery_code}</p><p className="mt-1 text-xs text-emerald-800">Ürünü kontrol etmeden paylaşmayın.</p></div></div>}
 
         <div className="mt-4 flex flex-wrap gap-2">
           {carrier&&delivery.status==="yukleme_bekliyor"&&<><EvidenceButton label="Yükleme kanıtı ekle" disabled={busy!==null} onFile={file=>void uploadEvidence(delivery,"yukleme",file)}/><button disabled={busy!==null} onClick={()=>void start(delivery)} className="ui-button ui-button--primary"><Truck className="h-4 w-4"/>Taşımayı başlat</button></>}
