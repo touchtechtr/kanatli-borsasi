@@ -1,21 +1,25 @@
 "use client";
-import { useCallback,useEffect,useMemo,useState } from "react";
+import { Suspense,useCallback,useEffect,useMemo,useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { PackageSearch,Send,Truck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader,PageShell,SurfaceCard } from "@/components/ui/PlatformUI";
 type Vehicle={id:string;plate:string;vehicle_type:string;capacity:number;capacity_unit:string};
-export default function NewLogisticsPage(){
- const supabase=useMemo(()=>createClient(),[]);const[requestId,setRequestId]=useState<string|null>(null);const[mode,setMode]=useState<"service"|"request"|"quote">("service");const[vehicles,setVehicles]=useState<Vehicle[]>([]);const[access,setAccess]=useState<{active?:boolean}>({});const[error,setError]=useState<string|null>(null);const[message,setMessage]=useState<string|null>(null);const[busy,setBusy]=useState(false);
+export default function NewLogisticsPage(){return <Suspense fallback={<PageShell><SurfaceCard>Yükleniyor...</SurfaceCard></PageShell>}><NewLogisticsContent/></Suspense>}
+function NewLogisticsContent(){
+ const searchParams=useSearchParams();
+ const supabase=useMemo(()=>createClient(),[]);const[requestId,setRequestId]=useState<string|null>(null);const[mode,setMode]=useState<"service"|"request"|"quote">("request");const[vehicles,setVehicles]=useState<Vehicle[]>([]);const[access,setAccess]=useState<{active?:boolean}>({});const[error,setError]=useState<string|null>(null);const[message,setMessage]=useState<string|null>(null);const[busy,setBusy]=useState(false);
  const[form,setForm]=useState({title:"",capability:"canli_hayvan",origin_city:"",destination_city:"",service_area:"",available_from:"",available_to:"",price:"",price_unit:"teklif",description:"",vehicle_id:"",pickup_date:"",quantity:"",quantity_unit:"ton",amount:"",message:""});
  const load=useCallback(async()=>{const a=await supabase.rpc("get_my_logistics_access");if(a.error){setError(a.error.message);return}setAccess(a.data??{});const v=await supabase.from("logistics_vehicles").select("id,plate,vehicle_type,capacity,capacity_unit").eq("status","onaylandi");if(!v.error)setVehicles((v.data??[]) as Vehicle[])},[supabase]);useEffect(()=>{void load()},[load]);
+ useEffect(()=>{const id=searchParams.get("request");if(id){setRequestId(id);setMode("quote")}},[searchParams]);
  const submit=async(e:React.FormEvent)=>{e.preventDefault();setBusy(true);setError(null);setMessage(null);let r;
   if(mode==="service")r=await supabase.rpc("create_logistics_listing",{p_data:form});
   else if(mode==="request")r=await supabase.rpc("create_logistics_request",{p_data:{title:form.title,cargo_type:form.capability,origin_city:form.origin_city,destination_city:form.destination_city,pickup_date:form.pickup_date,quantity:form.quantity,quantity_unit:form.quantity_unit,description:form.description}});
   else r=await supabase.rpc("submit_logistics_quote",{p_request_id:requestId,p_vehicle_id:form.vehicle_id,p_amount:Number(form.amount),p_message:form.message||null});
   setBusy(false);if(r.error){setError(r.error.message);return}setMessage(mode==="quote"?"Teklifiniz iletildi.":"Kaydınız yönetim incelemesine gönderildi.");
  };
- if(mode!=="request"&&!access.active)return <PageShell><PageHeader eyebrow="Yetki kontrolü" title="Nakliye faaliyeti gerekli" icon={Truck} tone="amber" description="Nakliye hizmeti yayınlamak veya taşıma talebine teklif vermek için faaliyet ve en az bir araç onayı gerekir."/><SurfaceCard><Link href="/profil/faaliyetler?activity=logistics_operator" className="ui-button ui-button--primary">Faaliyet başvurusuna git</Link><Link href="/profil/lojistik" className="ui-button ui-button--secondary ml-2">Araçlarımı yönet</Link></SurfaceCard></PageShell>;
+ if(mode!=="request"&&!access.active)return <PageShell><PageHeader eyebrow="Yetki kontrolü" title="Nakliye faaliyeti gerekli" icon={Truck} tone="amber" description="Nakliye hizmeti yayınlamak veya taşıma talebine teklif vermek için faaliyet ve en az bir araç onayı gerekir. Taşıma talebi oluşturmak için nakliyeci yetkisi gerekmez."/><SurfaceCard><div className="flex flex-wrap gap-2"><button onClick={()=>{setRequestId(null);setMode("request")}} className="ui-button ui-button--primary"><PackageSearch className="h-4 w-4"/>Taşıma talebi oluştur</button><Link href="/profil/faaliyetler?activity=logistics_operator" className="ui-button ui-button--secondary">Faaliyet başvurusuna git</Link><Link href="/profil/lojistik" className="ui-button ui-button--secondary">Araçlarımı yönet</Link></div></SurfaceCard></PageShell>;
  return <PageShell><PageHeader eyebrow="Lojistik pazarı" title={mode==="service"?"Nakliye hizmeti yayınla":mode==="request"?"Taşıma talebi oluştur":"Taşıma talebine teklif ver"} icon={mode==="request"?PackageSearch:Truck} tone="emerald" description="Kayıtlar güvenlik ve uygunluk kontrolünden sonra yayınlanır."/>
   {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}{message&&<div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{message}</div>}
   {!requestId&&<SurfaceCard className="flex gap-2"><button onClick={()=>setMode("service")} className={`ui-button ${mode==="service"?"ui-button--primary":"ui-button--secondary"}`}>Hizmet ilanı</button><button onClick={()=>setMode("request")} className={`ui-button ${mode==="request"?"ui-button--primary":"ui-button--secondary"}`}>Taşıma talebi</button></SurfaceCard>}
