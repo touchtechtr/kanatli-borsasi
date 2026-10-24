@@ -1010,19 +1010,19 @@ function HomeContent() {
           {errorMessage && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{errorMessage}</div>}
           {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-14 text-center text-sm text-slate-400">İlanlar yükleniyor…</div> : (
             <div className="space-y-10">
-              {visibleMarketSections.includes("feed") && <MarketplaceSection title="Yem ve hammadde ilanları" description="Fabrika yemi, tahıl, katkı maddesi ve toptan yem ticareti ilanları." count={marketplaceSections.feed.length} href="/?market=feed#ilan-akisi" accent="amber">
+              {visibleMarketSections.includes("feed") && <MarketplaceSection title="Yem ve hammadde ilanları" description="Fabrika yemi, tahıl, katkı maddesi ve toptan yem ticareti ilanları." count={marketplaceSections.feed.length} href="/pazar/yem" accent="amber">
                 {(marketView === "feed" ? marketplaceSections.feed : marketplaceSections.feed.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
-              {visibleMarketSections.includes("livestock") && <MarketplaceSection title="Canlı hayvan ilanları" description="Kanatlı, küçükbaş ve büyükbaş satış ilanlarını firma bilgileriyle inceleyin." count={marketplaceSections.livestock.length} href="/livestock" accent="blue">
+              {visibleMarketSections.includes("livestock") && <MarketplaceSection title="Canlı hayvan ilanları" description="Kanatlı, küçükbaş ve büyükbaş satış ilanlarını firma bilgileriyle inceleyin." count={marketplaceSections.livestock.length} href="/pazar/canli-hayvan" accent="blue">
                 {(marketView === "livestock" ? marketplaceSections.livestock : marketplaceSections.livestock.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
-              {visibleMarketSections.includes("agri") && <MarketplaceSection title="Zirai girdi ve tarım malzemeleri" description="Gübre, tohum, fide, bitki koruma, sulama ve üretim ekipmanı ilanları." count={marketplaceSections.agri.length} href="/?market=agri#ilan-akisi" accent="emerald">
+              {visibleMarketSections.includes("agri") && <MarketplaceSection title="Zirai girdi ve tarım malzemeleri" description="Gübre, tohum, fide, bitki koruma, sulama ve üretim ekipmanı ilanları." count={marketplaceSections.agri.length} href="/pazar/zirai" accent="emerald">
                 {(marketView === "agri" ? marketplaceSections.agri : marketplaceSections.agri.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
-              {visibleMarketSections.includes("slaughterhouse") && <MarketplaceSection title="Kesimhane toplu alım talepleri" description="Onaylı kesimhanelerin canlı hayvan tedariki için yayınladığı toplu alım talepleri." count={filteredPurchaseRequests.length} href="/kesimhane/alim-merkezi" accent="violet">
+              {visibleMarketSections.includes("slaughterhouse") && <MarketplaceSection title="Kesimhane toplu alım talepleri" description="Onaylı kesimhanelerin canlı hayvan tedariki için yayınladığı toplu alım talepleri." count={filteredPurchaseRequests.length} href="/pazar/kesimhane" accent="violet">
                 {(marketView === "slaughterhouse" ? filteredPurchaseRequests : filteredPurchaseRequests.slice(0, 6)).map((item) => <PurchaseRequestCard key={item.id} item={item} />)}
               </MarketplaceSection>}
-              {visibleMarketSections.includes("other") && <MarketplaceSection title="Diğer ticari ilanlar" description="Desteklenen diğer tarımsal ürün ve ticari fırsatlar." count={marketplaceSections.other.length} href="/?market=other#ilan-akisi" accent="slate">
+              {visibleMarketSections.includes("other") && <MarketplaceSection title="Diğer ticari ilanlar" description="Desteklenen diğer tarımsal ürün ve ticari fırsatlar." count={marketplaceSections.other.length} href="/pazar/diger" accent="slate">
                 {(marketView === "other" ? marketplaceSections.other : marketplaceSections.other.slice(0, 6)).map((item) => <ListingRow key={item.key} item={item} onOffer={openOffer} own={Boolean(user && item.companyId === userCompanyId)} staffReadOnly={isPlatformStaff} />)}
               </MarketplaceSection>}
             </div>
