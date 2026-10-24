@@ -10,11 +10,13 @@ import {
   ExternalLink,
   Handshake,
   RefreshCw,
+  Truck,
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/ui/PlatformUI";
 import { dispatchNotificationEmails } from "@/lib/dispatch-notification-emails";
+import CompanyLogisticsRequests from "@/components/logistics/CompanyLogisticsRequests";
 
 type OfferStatus =
   "beklemede" | "kabul_edildi" | "reddedildi" | "iptal_edildi" | "tamamlandi";
@@ -107,6 +109,7 @@ export default function CompanyOffersPage() {
     "all",
   );
   const [statusFilter, setStatusFilter] = useState("all");
+  const [offerArea,setOfferArea]=useState<"trade"|"logistics">("trade");
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -230,11 +233,13 @@ export default function CompanyOffersPage() {
   }, [supabase]);
 
   useEffect(() => {
-    const requestedDirection = new URLSearchParams(window.location.search).get(
+    const params=new URLSearchParams(window.location.search);
+    const requestedDirection = params.get(
       "direction",
     );
     if (requestedDirection === "incoming" || requestedDirection === "outgoing")
       setDirection(requestedDirection);
+    if(params.get("tab")==="lojistik")setOfferArea("logistics");
     void loadOffers();
   }, [loadOffers]);
 
@@ -331,7 +336,7 @@ export default function CompanyOffersPage() {
   return (
     <main className="ui-page-shell">
       <div className="mx-auto max-w-7xl space-y-6">
-        <PageHeader eyebrow="Şirket ticaret merkezi" title="Ticari Teklifler" description="Gelen ve gönderilen teklifleri, karşı tarafı ve işlem durumunu tek ekrandan yönetin." icon={Handshake} tone="emerald" actions={<button onClick={() => void loadOffers()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4"/>Yenile</button>} />
+        <PageHeader eyebrow="Şirket ticaret merkezi" title="Teklifler" description="Ürün ve nakliye tekliflerini, karşı tarafı ve işlem durumunu tek merkezden yönetin." icon={Handshake} tone="emerald" actions={<button onClick={() => void loadOffers()} className="ui-button ui-button--secondary"><RefreshCw className="h-4 w-4"/>Yenile</button>} />
 
         {errorMessage && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
@@ -339,6 +344,9 @@ export default function CompanyOffersPage() {
           </div>
         )}
 
+        <section className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"><button onClick={()=>setOfferArea("trade")} className={`ui-button ${offerArea==="trade"?"ui-button--primary":"ui-button--secondary"}`}>Ürün ve ilan teklifleri</button><button onClick={()=>setOfferArea("logistics")} className={`ui-button ${offerArea==="logistics"?"ui-button--primary":"ui-button--secondary"}`}><Truck className="h-4 w-4"/>Nakliye teklifleri</button></section>
+
+        {offerArea==="logistics"?<CompanyLogisticsRequests/>:<>
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat
             label="Gelen teklif"
@@ -568,6 +576,7 @@ export default function CompanyOffersPage() {
             })
           )}
         </section>
+        </>}
 
         {activeTotal > 0 && (
           <p className="text-center text-xs text-slate-400">
